@@ -1,0 +1,117 @@
+@using Ludo.Core.Domain.Enums
+
+<div class="card bg-base-100 border border-base-300 shadow-sm">
+    <div class="card-body items-center gap-4 p-5">
+
+        <div class="text-center">
+            <p class="text-sm font-semibold uppercase tracking-widest text-base-content/60">
+                Dice
+            </p>
+
+            <h3 class="mt-1 text-xl font-bold"
+                style="@($"color:{ColorCss(PlayerColor)}")">
+                @PlayerName
+            </h3>
+
+            <p class="text-sm text-base-content/60">
+                @(Phase == TurnPhase.WaitingForRoll
+                    ? "Your turn to roll"
+                    : Phase == TurnPhase.WaitingForMove
+                        ? "Choose a piece to move"
+                        : "Game finished")
+            </p>
+        </div>
+
+        <div class="flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-base-300 bg-base-200 shadow-inner"
+             aria-live="polite"
+             aria-label="Last dice result">
+
+            @if (LastRoll is >= 1 and <= 6)
+            {
+                <span class="text-6xl leading-none"
+                      aria-label="@($"Rolled {LastRoll}")">
+                    @DiceFace(LastRoll.Value)
+                </span>
+            }
+            else
+            {
+                <span class="text-5xl text-base-content/30"
+                      aria-label="Dice not rolled yet">
+                    🎲
+                </span>
+            }
+        </div>
+
+        @if (LastRoll is >= 1 and <= 6)
+        {
+            <p class="text-sm text-base-content/70">
+                @LastRollPlayerName rolled
+                <strong class="text-base-content">@LastRoll</strong>
+            </p>
+        }
+        else
+        {
+            <p class="text-sm text-base-content/60">
+                Waiting for the first roll
+            </p>
+        }
+
+        <button class="btn btn-primary w-full"
+                disabled="@(Phase != TurnPhase.WaitingForRoll)"
+                @onclick="OnRoll">
+            @if (Phase == TurnPhase.WaitingForMove)
+            {
+                <span>Select a piece</span>
+            }
+            else if (Phase == TurnPhase.Finished)
+            {
+                <span>Game over</span>
+            }
+            else
+            {
+                <span>🎲 Roll Dice</span>
+            }
+        </button>
+
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string PlayerName { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public PlayerColor PlayerColor { get; set; }
+
+    [Parameter]
+    public int? LastRoll { get; set; }
+
+    [Parameter]
+    public string? LastRollPlayerName { get; set; }
+
+    [Parameter]
+    public TurnPhase Phase { get; set; } = TurnPhase.WaitingForRoll;
+
+    [Parameter]
+    public EventCallback OnRoll { get; set; }
+
+    private static string DiceFace(int value) => value switch
+    {
+        1 => "⚀",
+        2 => "⚁",
+        3 => "⚂",
+        4 => "⚃",
+        5 => "⚄",
+        6 => "⚅",
+        _ => "🎲"
+    };
+
+    private static string ColorCss(PlayerColor color) => color switch
+    {
+        PlayerColor.Red => "#e53935",
+        PlayerColor.Green => "#249b50",
+        PlayerColor.Yellow => "#c49b00",
+        PlayerColor.Blue => "#3478db",
+        _ => "#333333"
+    };
+}

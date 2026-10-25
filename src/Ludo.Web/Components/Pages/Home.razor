@@ -1,0 +1,184 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using Ludo.Core.Domain
+@using Ludo.Core.Domain.Enums
+@using Ludo.Core.Domain.Interfaces
+@inject Ludo.Web.Services.GameSessionService GameSession
+@inject NavigationManager Navigation
+
+<PageTitle>New Ludo Game</PageTitle>
+
+<div class="min-h-screen bg-base-200 flex items-center justify-center p-4">
+    <div class="card bg-base-100 shadow-xl w-full max-w-xl">
+        <div class="card-body gap-5">
+            <div class="text-center">
+                <div class="text-5xl mb-3">🎲</div>
+                <h1 class="text-3xl font-bold">Let's Play Ludo</h1>
+                <p class="text-base-content/60 mt-2">
+                    Set up your players and start a game.
+                </p>
+            </div>
+
+            <fieldset class="fieldset">
+                <legend class="fieldset-legend">Number of players</legend>
+                <select class="select w-full" @bind="playerCount" @bind:after="NormalizeColors">
+                    @for (int count = 2; count <= 4; count++)
+                    {
+                        <option value="@count">@count players</option>
+                    }
+                </select>
+            </fieldset>
+
+            <div class="space-y-4">
+                @for (int i = 0; i < playerCount; i++)
+                {
+                    int index = i;
+
+                    <div class="card card-border bg-base-100">
+                        <div class="card-body p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="badge badge-neutral badge-lg">
+                                    @(index + 1)
+                                </div>
+
+                                <h2 class="font-semibold">
+                                    Player @(index + 1)
+                                </h2>
+
+                                <span class="ml-auto w-4 h-4 rounded-full"
+                                      style="@($"background:{ColorCss(drafts[index].Color)}")">
+                                </span>
+                            </div>
+
+                            <fieldset class="fieldset">
+                                <legend class="fieldset-legend">Name</legend>
+                                <input class="input input-bordered w-full"
+                                       @bind="drafts[index].Name"
+                                       maxlength="30"
+                                       placeholder="Enter player name" />
+                            </fieldset>
+
+                            <fieldset class="fieldset">
+                                <legend class="fieldset-legend">Piece color</legend>
+                                <select class="select select-bordered w-full"
+                                        @bind="drafts[index].Color">
+                                    @foreach (PlayerColor color in Enum.GetValues<PlayerColor>())
+                                    {
+                                        bool usedByOther = drafts
+                                            .Take(playerCount)
+                                            .Where((_, j) => j != index)
+                                            .Any(d => d.Color == color);
+
+                                        <option value="@color"
+                                                disabled="@usedByOther">
+                                            @color
+                                        </option>
+                                    }
+                                </select>
+                            </fieldset>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-error" role="alert">
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <button class="btn btn-primary btn-lg w-full"
+                    @onclick="StartGame">
+                Start Game <span aria-hidden="true">→</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int playerCount = 2;
+    private string? errorMessage;
+
+    private readonly List<PlayerDraft> drafts =
+    [
+        new("Player 1", PlayerColor.Red),
+        new("Player 2", PlayerColor.Green),
+        new("Player 3", PlayerColor.Yellow),
+        new("Player 4", PlayerColor.Blue)
+    ];
+
+    private void StartGame()
+    {
+        errorMessage = null;
+
+        var selected = drafts.Take(playerCount).ToList();
+
+        if (selected.Any(p => string.IsNullOrWhiteSpace(p.Name)))
+        {
+            errorMessage = "Please enter a name for every player.";
+            return;
+        }
+
+        if (selected.Select(p => p.Color).Distinct().Count() != playerCount)
+        {
+            errorMessage = "Each player must have a different color.";
+            return;
+        }
+
+        if (selected.Select(p => p.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != playerCount)
+        {
+            errorMessage = "Player names must be unique.";
+            return;
+        }
+
+        List<IPlayer> players = selected
+            .Select((p, i) => (IPlayer)new Player(
+                i, p.Name.Trim(), p.Color))
+            .ToList();
+        
+        try
+        {
+            GameSession.StartGame(players);
+            Navigation.NavigateTo("/game");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Unable to start the game. Please try again.";
+            Console.Error.WriteLine(ex);
+        }
+    }
+
+    private static string ColorCss(PlayerColor color) => color switch
+    {
+        PlayerColor.Red => "#e53935",
+        PlayerColor.Green => "#2e9d50",
+        PlayerColor.Yellow => "#f4c430",
+        PlayerColor.Blue => "#3478db",
+        _ => "#888888"
+    };
+
+    private sealed class PlayerDraft(string name, PlayerColor color)
+    {
+        public string Name { get; set; } = name;
+        public PlayerColor Color { get; set; } = color;
+    }
+
+    private void NormalizeColors()
+    {
+        var colors = Enum.GetValues<PlayerColor>();
+
+        for (int i = 0; i < playerCount; i++)
+        {
+            bool duplicate = drafts
+                .Take(i)
+                .Any(p => p.Color == drafts[i].Color);
+
+            if (!duplicate)
+                continue;
+
+            drafts[i].Color = colors.First(color =>
+                !drafts.Take(i).Any(p => p.Color == color));
+        }
+    }
+}

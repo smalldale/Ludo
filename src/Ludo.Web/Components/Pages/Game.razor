@@ -1,0 +1,247 @@
+@page "/game"
+@implements IDisposable
+@using Ludo.Core.Application
+@using Ludo.Core.Domain.Interfaces
+@using Ludo.Core.Domain.Enums
+@using Ludo.Web.Components.Game
+@inject Ludo.Web.Services.GameSessionService Session
+@inject NavigationManager Navigation
+
+<PageTitle>Ludo Game</PageTitle>
+
+@if (Session.Game is not { } game)
+{
+    <div class="game-message">
+        <h2>No game started</h2>
+        <button @onclick='() => Navigation.NavigateTo("/")'>
+            Set up a game
+        </button>
+    </div>
+}
+else
+{
+    var currentPlayer = game.GetCurrentPlayer();
+
+    <main class="game-page">
+        <header class="game-header">
+            <div>
+                <h1>Ludo</h1>
+                <p>Local multiplayer</p>
+            </div>
+
+            <button class="secondary-button"
+                    @onclick='() => Navigation.NavigateTo("/")'>
+                New Game
+            </button>
+        </header>
+
+        @* history *@
+        <div class="game-feedback">
+            <section class="status-message" aria-live="polite" aria-atomic="true">
+                <h3>Game status</h3>
+                <p>@Session.StatusMessage</p>
+            </section>
+
+            <section class="move-history">
+                <h3>Recent activity</h3>
+
+                @if (Session.History.Count == 0)
+                {
+                    <p class="history-empty">No moves yet.</p>
+                }
+                else
+                {
+                    <ol>
+                        @foreach (var item in Session.History)
+                        {
+                            <li>@item</li>
+                        }
+                    </ol>
+                }
+            </section>
+        </div>
+
+        <div class="game-layout">
+            <section class="board-section">
+                <LudoBoard 
+                    Board="game.board"
+                    Game="game"
+                    MovablePieceIds="GetMovablePieceIds(game)"
+                    SelectedPieceId="SelectedPieceId"
+                    OnPieceSelected="SelectPiece" />
+            </section>
+
+            <aside class="game-sidebar">
+                <div class="status-card">
+                    <h1>For Debug</h1>
+                    <span class="status-label">CURRENT TURN</span>
+                    <h2 style="@($"color:{ColorCss(currentPlayer.Color)}")">
+                        @currentPlayer.Name
+                    </h2>
+                    <p>@currentPlayer.Color</p>
+                    <p>Turn @game.Turn</p>
+                    <p>Phase: @game.Phase</p>
+
+                    <DiceView
+                        PlayerName="@currentPlayer.Name"
+                        PlayerColor="@currentPlayer.Color"
+                        Phase="@game.Phase"
+                        LastRoll="@Session.LastRoll"
+                        LastRollPlayerName="@GetLastRollPlayerName()"
+                        OnRoll="RollDice" />
+                    
+                    @if (game.Phase == TurnPhase.Finished)
+                    {
+                        <h3>Game finished!</h3>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        <div class="alert alert-info mt-3" role="status">
+                            <span>@message</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="status-card">
+                    <h3>Rankings</h3>
+
+                    @if (game.Rankings.Count == 0)
+                    {
+                        <p>No players have finished yet.</p>
+                    }
+                    else
+                    {
+                        @for (int i = 0; i < game.Rankings.Count; i++)
+                        {
+                            var player = game.Rankings[i];
+                            <p>
+                                @(i + 1). @player.Name
+                                (@player.Color)
+                            </p>
+                        }
+                    }
+                </div>
+            </aside>
+        </div>
+    </main>
+}
+
+@code {
+    private string? message;
+    private int? SelectedPieceId;
+    protected override void OnInitialized()
+    {
+        Session.StateChanged += OnStateChanged;
+    }
+
+    private void OnStateChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void RollDice()
+    {
+        var game = Session.Game;
+        if (game is null)
+        {
+            return;
+        }
+
+        try
+        {
+            message = null;
+            var player = game.GetPlayer(game.GetCurrentPlayer().Id);
+            int roll = Session.RollDice(game.GetCurrentPlayer().Id);
+
+            // The actual roll is stored in the controller.
+            // We will expose it through session state in the next step.
+            message = $"{player.Name} rolled a {roll}.";
+        }
+        catch (InvalidOperationException ex)
+        {
+            message = ex.Message;
+        }
+    }
+
+    private string? GetLastRollPlayerName()
+    {
+        var game = Session.Game;
+
+        if (game is null || Session.LastRollPlayerId is not int playerId)
+        {
+            return null;
+        }
+
+        return game.GetPlayer(playerId).Name;
+    }
+
+    private IReadOnlyCollection<int> GetMovablePieceIds(
+    GameController game)
+    {
+        if (game.Phase != TurnPhase.WaitingForMove)
+        {
+            return Array.Empty<int>();
+        }
+
+        int playerId = game.GetCurrentPlayer().Id;
+
+        return Enumerable.Range(0, 4)
+            .Select(i => game.GetPiece(playerId * 4 + i))
+            .Where(piece =>
+                game.GetMovablePositions()
+                    .Contains(game.GetPosition(piece)))
+            .Select(piece => piece.Id)
+            .ToArray();
+    }
+
+    private void SelectPiece(int pieceId)
+    {
+        var game = Session.Game;
+
+        if (game is null ||
+            game.Phase != TurnPhase.WaitingForMove)
+            return;
+
+        var currentPlayer = game.GetCurrentPlayer();
+        var movableIds = GetMovablePieceIds(game);
+
+        if (!movableIds.Contains(pieceId))
+        {
+            message = "That piece cannot move. Choose a highlighted piece.";
+            return;
+        }
+
+        @* if (SelectedPieceId != pieceId)
+        {
+            SelectedPieceId = pieceId;
+            message = "Piece selected. Click it again to move.";
+            return;
+        } *@
+
+        // Move immediately on the first click.
+        var result = Session.MovePiece(currentPlayer.Id, pieceId);
+
+        SelectedPieceId = null;
+
+        message = result.Success
+            ? "Move completed."
+            : result.Error;
+
+        StateHasChanged();
+    }
+
+    private static string ColorCss(PlayerColor color) => color switch
+    {
+        Ludo.Core.Domain.Enums.PlayerColor.Red => "#e53935",
+        Ludo.Core.Domain.Enums.PlayerColor.Green => "#249b50",
+        Ludo.Core.Domain.Enums.PlayerColor.Yellow => "#c49b00",
+        Ludo.Core.Domain.Enums.PlayerColor.Blue => "#3478db",
+        _ => "#333333"
+    };
+
+    public void Dispose()
+    {
+        Session.StateChanged -= OnStateChanged;
+    }
+}

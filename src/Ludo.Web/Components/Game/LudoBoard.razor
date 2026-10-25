@@ -1,0 +1,211 @@
+@using Ludo.Core.Application
+@using Ludo.Core.Domain
+@using Ludo.Core.Domain.Enums
+@using Ludo.Core.Domain.Interfaces
+
+@* creating svg board *@
+@if (Game is not null)
+{   
+    <div class="ludo-board-container">
+        <svg class="ludo-board"
+             viewBox="0 0 600 600"
+             role="img"
+             aria-label="Ludo game board">
+
+            @for (int row = 0; row < Board.Size; row++)
+            {
+                @for (int col = 0; col < Board.Size; col++)
+                {
+                    int r = row;
+                    int c = col;
+                    ICell? cell = Board.Cells[r, c];
+
+                    if (cell is not null)
+                    {
+                        <rect x="@(c * 40)"
+                              y="@(r * 40)"
+                              width="40"
+                              height="40"
+                              fill="@GetCellColor(r, c, cell)"
+                              stroke="#aab0bb"
+                              stroke-width="1" />
+
+                        @if (cell.Pieces.Count > 0)
+                        {
+                            int pieceCount = cell.Pieces.Count;
+
+                            @for (int i = 0; i < pieceCount; i++)
+                            {
+                                IPiece piece = cell.Pieces[i];
+                                var offset = GetPieceOffset(i, pieceCount);
+
+                                <g @key="piece.Id"
+                                    class="@GetPieceCssClass(piece)"
+                                    role="button"
+                                    tabindex="0"
+                                    aria-label="@($"Piece {piece.Id}")"
+                                    aria-pressed="@(SelectedPieceId == piece.Id)"
+                                    @onclick="() => OnPieceSelected.InvokeAsync(piece.Id)"
+                                    @onkeydown="(e) => HandlePieceKeyDown(e, piece.Id)">
+
+                                    <circle cx="@(c * 40 + 20 + offset.X)"
+                                            cy="@(r * 40 + 20 + offset.Y)"
+                                            r="@PieceRadius(pieceCount)"
+                                            fill="@ColorCss(piece.Color)"
+                                            stroke="white"
+                                            stroke-width="2" />
+
+                                    <text x="@(c * 40 + 20 + offset.X)"
+                                          y="@(r * 40 + 20 + offset.Y + 4)"
+                                          text-anchor="middle"
+                                          font-size="10"
+                                          font-weight="bold"
+                                          fill="@TextColor(piece.Color)"
+                                          pointer-events="none">
+                                        @piece.Id
+                                    </text>
+                                </g>
+                            }
+                        }
+                    }
+                }
+            }
+        </svg>
+    </div>
+}
+
+
+
+@code {
+    [Parameter, EditorRequired]
+    public IBoard Board { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public GameController Game { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<int> OnPieceSelected { get; set; }
+
+    [Parameter]
+    public IReadOnlyCollection<int> MovablePieceIds { get; set; }
+         = Array.Empty<int>();
+        
+    [Parameter]
+    public int? SelectedPieceId { get; set; }
+
+    private string GetCellColor(int row, int col, ICell cell)
+    {
+        Coordinate coordinate = new(row, col);
+
+        foreach (var entry in Board.BaseCells)
+        {
+            if (entry.Value.Any(p => SameCoordinate(p, coordinate)))
+            {
+                return LightColor(entry.Key);
+            }
+        }
+
+        foreach (var entry in Board.HomeStretch)
+        {
+            if (entry.Value.Any(p => SameCoordinate(p, coordinate)))
+            {
+                return LightColor(entry.Key);
+            }
+        }
+        return cell.Type switch
+        {
+            CellType.Safe => "#fff1a8",
+            CellType.Start => GetStartColor(coordinate),
+            CellType.HomeTriangle => "#f3f4f6",
+            CellType.HomeColumn => "#f3f4f6",
+            CellType.Base => "#f8fafc",
+            _ => "#ffffff"
+        }; 
+    }
+
+    private string GetStartColor(Coordinate coordinate)
+    {
+        foreach (var entry in Board.StartIndex)
+        {
+            int index = entry.Value;
+
+            if (index >= 0 && index < Board.Track.Count &&
+                SameCoordinate(Board.Track[index], coordinate))
+            {
+                return LightColor(entry.Key);
+            }
+        }
+
+        return "#ffffff";
+    }
+
+    private static bool SameCoordinate(Coordinate a, Coordinate b) =>
+        a.Row == b.Row && a.Col == b.Col;
+
+    private static string ColorCss(PlayerColor color) => color switch
+    {
+        PlayerColor.Red => "#e53935",
+        PlayerColor.Green => "#249b55",
+        PlayerColor.Yellow => "#f4c430",
+        PlayerColor.Blue => "#3478db",
+        _ => "#888888"
+    };
+
+    private static string LightColor(PlayerColor color) => color switch
+    {
+        PlayerColor.Red => "#ffdada",
+        PlayerColor.Green => "#d9f4e2",
+        PlayerColor.Yellow => "#fff2bd",
+        PlayerColor.Blue => "#dce9ff",
+        _ => "#f3f4f6"
+    };
+
+    private static string TextColor(PlayerColor color) =>
+        color == PlayerColor.Yellow ? "#423500" : "#ffffff";
+
+    private static double PieceRadius(int count) =>
+        count > 1 ? 10 : 13;
+
+    private static (double X, double Y) GetPieceOffset(int index, int count)
+    {
+        if (count <= 1)
+        {
+            return (0, 0);
+        }
+        double angle = 2 * Math.PI * index / count;
+        return (10 * Math.Cos(angle), 10 * Math.Sin(angle));
+    }
+
+    @* private string GetPieceCssClass(int pieceId) =>
+    MovablePieceIds.Contains(pieceId)
+        ? "board-piece movable-piece"
+        : "board-piece"; *@
+
+    private string GetPieceCssClass(IPiece piece)
+    {
+        var classes = new List<string>();
+
+        if (Game.Phase == TurnPhase.WaitingForMove)
+        {
+            classes.Add(
+                MovablePieceIds.Contains(piece.Id)
+                    ? "piece-movable"
+                    : "piece-unavailable");
+        }
+
+        if (SelectedPieceId == piece.Id)
+            classes.Add("piece-selected");
+
+        return string.Join(" ", classes);
+    }
+
+    private async Task HandlePieceKeyDown(
+        Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e,
+        int pieceId)
+    {
+        if (e.Key is "Enter" or " ")
+        {
+            await OnPieceSelected.InvokeAsync(pieceId);
+        }
+    }
+}

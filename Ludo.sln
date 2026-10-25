@@ -1,0 +1,49 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# 
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ludo.Core", "src\Ludo.Core\Ludo.Core.csproj", "{BD61E3D0-1CB0-4240-BC21-0CDCCB0A6AF4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{C046F805-1A09-4F8E-B68A-DB1814400470}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ludo.Console", "src\Ludo.Console\Ludo.Console.csproj", "{F9E5C4DA-0EBC-4519-8C79-914207F30D41}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ludo.Web", "src\Ludo.Web\Ludo.Web.csproj", "{AFD196A8-41F9-4998-A2C6-8786AE4BB96D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ludo.Api", "src\Ludo.Api\Ludo.Api.csproj", "{464E317B-AD02-457C-B044-4D6F2612A0E5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ludo.Tests", "src\Ludo.Tests\Ludo.Tests.csproj", "{83198100-730F-4A19-B7FD-1FA557ED87A0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BD61E3D0-1CB0-4240-BC21-0CDCCB0A6AF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD61E3D0-1CB0-4240-BC21-0CDCCB0A6AF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD61E3D0-1CB0-4240-BC21-0CDCCB0A6AF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD61E3D0-1CB0-4240-BC21-0CDCCB0A6AF4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9E5C4DA-0EBC-4519-8C79-914207F30D41}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9E5C4DA-0EBC-4519-8C79-914207F30D41}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9E5C4DA-0EBC-4519-8C79-914207F30D41}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9E5C4DA-0EBC-4519-8C79-914207F30D41}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFD196A8-41F9-4998-A2C6-8786AE4BB96D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFD196A8-41F9-4998-A2C6-8786AE4BB96D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFD196A8-41F9-4998-A2C6-8786AE4BB96D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFD196A8-41F9-4998-A2C6-8786AE4BB96D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{464E317B-AD02-457C-B044-4D6F2612A0E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{464E317B-AD02-457C-B044-4D6F2612A0E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{464E317B-AD02-457C-B044-4D6F2612A0E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{464E317B-AD02-457C-B044-4D6F2612A0E5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{83198100-730F-4A19-B7FD-1FA557ED87A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{83198100-730F-4A19-B7FD-1FA557ED87A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{83198100-730F-4A19-B7FD-1FA557ED87A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{83198100-730F-4A19-B7FD-1FA557ED87A0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F9E5C4DA-0EBC-4519-8C79-914207F30D41} = {C046F805-1A09-4F8E-B68A-DB1814400470}
+		{AFD196A8-41F9-4998-A2C6-8786AE4BB96D} = {C046F805-1A09-4F8E-B68A-DB1814400470}
+		{464E317B-AD02-457C-B044-4D6F2612A0E5} = {C046F805-1A09-4F8E-B68A-DB1814400470}
+		{83198100-730F-4A19-B7FD-1FA557ED87A0} = {C046F805-1A09-4F8E-B68A-DB1814400470}
+	EndGlobalSection
+EndGlobal

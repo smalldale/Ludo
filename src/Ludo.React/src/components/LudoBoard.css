@@ -1,0 +1,203 @@
+
+.ludo-board {
+  display: grid;
+  width: min(100%, 600px);
+  aspect-ratio: 1;
+  border: 2px solid #263238;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
+  margin-inline: auto;
+}
+
+.board-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  box-sizing: border-box;
+  border: 1px solid #d7dce0;
+  background: #fff;
+  font-size: clamp(8px, 1.5vw, 16px);
+}
+
+/* Coordinates that have no cell in the API */
+.cell-empty {
+  background: #fff;
+  border-color: transparent;
+}
+
+/* Main track */
+.cell-normal,
+.cell-safe,
+.cell-start {
+  background: #fff;
+  border-color: #b0bec5;
+}
+
+/* Starting spaces */
+.cell-start.cell-red {
+  background: #e53935;
+  color: #fff;
+}
+
+.cell-start.cell-green {
+  background: #43a047;
+  color: #fff;
+}
+
+.cell-start.cell-yellow {
+  background: #fdd835;
+  color: #263238;
+}
+
+.cell-start.cell-blue {
+  background: #1e88e5;
+  color: #fff;
+}
+
+/* Safe spaces */
+.cell-safe {
+  color: #263238;
+  font-weight: 700;
+}
+
+.cell-safe::after {
+  content: '★';
+}
+
+/* Colored home stretches */
+.cell-homecolumn.cell-red,
+.cell-hometriangle.cell-red {
+  background: #e53935;
+  color: #fff;
+}
+
+.cell-homecolumn.cell-green,
+.cell-hometriangle.cell-green {
+  background: #43a047;
+  color: #fff;
+}
+
+.cell-homecolumn.cell-yellow,
+.cell-hometriangle.cell-yellow {
+  background: #fdd835;
+  color: #263238;
+}
+
+.cell-homecolumn.cell-blue,
+.cell-hometriangle.cell-blue {
+  background: #1e88e5;
+  color: #fff;
+}
+
+/* Base cells */
+.cell-base.cell-red {
+  background: #ffcdd2;
+  border-color: #e53935;
+}
+
+.cell-base.cell-green {
+  background: #c8e6c9;
+  border-color: #43a047;
+}
+
+.cell-base.cell-yellow {
+  background: #fff9c4;
+  border-color: #f9a825;
+}
+
+.cell-base.cell-blue {
+  background: #bbdefb;
+  border-color: #1e88e5;
+}
+
+
+.cell-base-border {
+  background: white;
+  border-color: #d7dce0;
+}
+
+.cell-base-area.cell-red {
+  background: #e53935;
+}
+
+.cell-base-area.cell-green {
+  background: #43a047;
+}
+
+.cell-base-area.cell-yellow {
+  background: #fdd835;
+}
+
+.cell-base-area.cell-blue {
+  background: #1e88e5;
+}
+
+.piece {
+  width: 70%;
+  height: 70%;
+  border: 2px solid white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(8px, 1.2vw, 14px);
+  font-weight: bold;
+  color: white;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  cursor: default;
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    outline 150ms ease;
+}
+
+.piece-red {
+  background-color: #dc2626;
+}
+
+.piece-green {
+  background-color: #16a34a;
+}
+
+.piece-yellow {
+  background-color: #eab308;
+  color: #1f2937;
+}
+
+.piece-blue {
+  background-color: #2563eb;
+}
+
+.piece:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.piece-movable {
+  cursor: pointer;
+  box-shadow:
+    0 0 0 2px white,
+    0 0 0 4px #16a34a;
+}
+
+.piece-movable:hover {
+  transform: scale(1.12);
+}
+
+.piece-selected {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+  transform: scale(1.12);
+}
+
+.piece:focus-visible {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+}

@@ -1,0 +1,543 @@
+﻿using Ludo.Core.Application;
+using Ludo.Core.Domain;
+using Ludo.Core.Domain.Interfaces;
+using Ludo.Core.Domain.Enums;
+
+//https://ludoking.com/play/
+
+void SubscribeEvent(GameController game)
+{
+    game.OnDiceRolled += (playerId, roll) =>
+        Console.WriteLine($"[event] {game.GetPlayer(playerId).Color} Player {game.GetPlayer(playerId).Name}, rolled {roll}.");
+    game.OnPieceCaptured += victimPieceId =>
+        Console.WriteLine($"[event] {game.GetPiece(victimPieceId).Color} Piece {victimPieceId} has been captured, go to base.");
+    game.OnPieceMoved += (pieceId, position) =>
+        Console.WriteLine($"[event] {game.GetPiece(pieceId).Color} Piece moved to {position}.");
+    game.OnTurnChanged += (currentPlayerId) =>
+        Console.WriteLine($"[event] Now {game.GetPlayer(currentPlayerId).Color} player {game.GetPlayer(currentPlayerId).Name} turn (turn {game.Turn}, sixes {game.ConsecutiveSixes}).");
+    game.OnGameEnded += playerId =>
+        Console.WriteLine($"[event] Player {game.GetPlayer(playerId)} WIN. GAME ENDED.");
+    game.OnPlayerFinished += (playerId, rank) =>
+        Console.WriteLine($"[event] {game.GetPlayer(playerId).Name} finished in place #{rank}!");
+}
+
+List<IPiece> GetPlayerPieces(GameController game, IPlayer player)
+{
+    return Enumerable.Range(0, 4)
+        .Select(i => (player.Id - 1) * 4 + i + 1)
+        .Select(pieceId => game.GetPiece(pieceId))
+        .ToList();
+}
+
+// List<IPlayer> players = [
+//     new Player(1, "Alice", PlayerColor.Red),
+//     new Player(2, "Bob", PlayerColor.Green)
+// ];
+// GameController game = new GameController(players);
+// game.StartGame();
+
+
+// while(game.GetFinishedPlayer() is null)
+// {
+//     System.Console.WriteLine($"Current player {game.GetCurrentPlayer().Name} roll dice");
+//     int rolled = game.RollDice(game.GetCurrentPlayer().Id);
+
+//     System.Console.WriteLine($"Player {game.GetCurrentPlayer().Name} move piece");
+//     Random random = new Random();
+
+//     game.GetMovablePosition();
+//     // game.MovePiece(game.GetCurrentPlayer().Id, );
+    
+// }
+
+static string CenteredText(string text, int width)
+{
+    int leftPadding = (width - text.Length) / 2 + text.Length;
+    return text.PadLeft(leftPadding).PadRight(width);
+}
+
+void DrawBoard(Board board, GameController game, IEnumerable<IPlayer> players)
+{
+    int size = Board.Size;
+    var grid = new string[size, size];
+
+    // Draw the underlying board.
+    for (int row = 0; row < size; row++)
+    {
+        for (int col = 0; col < size; col++)
+        {
+            ICell? cell = board.Cells[row, col];
+
+            grid[row, col] = cell is null
+                ? "   "
+                : cell.Type switch
+                {
+                    CellType.Safe => " * ",
+                    _ => " . "
+                };
+        }
+    }
+
+    // Overlay pieces using their actual coordinates.
+    foreach (Player player in players)
+    {
+        foreach (IPiece piece in GetPlayerPieces(game, player))
+        {
+            Coordinate coordinate = game.FindCell(piece.Id);
+
+            // Skip coordinates that are not on the 15x15 board.
+            if (coordinate.Row < 0 || coordinate.Row >= size ||
+                coordinate.Col < 0 || coordinate.Col >= size)
+            {
+                continue;
+            }
+
+            string symbol = player.Color switch
+            {
+                PlayerColor.Red => "R",
+                PlayerColor.Green => "G",
+                PlayerColor.Yellow => "Y",
+                PlayerColor.Blue => "B",
+                _ => "?"
+            };
+
+            string current = grid[coordinate.Row, coordinate.Col];
+
+            // Show a count if multiple pieces share a cell.
+            grid[coordinate.Row, coordinate.Col] =
+                current.Length == 1 &&
+                current != "." &&
+                current != "*" &&
+                current != " "
+                    ? $"{CenteredText("*", 3)}"
+                    : $"{CenteredText(symbol+piece.Id, 3)}";
+        }
+    }
+
+    // Print column headers.
+    Console.Write("   ");
+    for (int col = 0; col < size; col++)
+        Console.Write($"{col,4} ");
+
+    Console.WriteLine();
+
+    for (int row = 0; row < size; row++)
+    {
+        Console.Write($"{row,2} ");
+
+        for (int col = 0; col < size; col++)
+            Console.Write($" {grid[row, col]} ");
+
+        Console.WriteLine();
+    }
+}
+
+void SelectAndMovePiece(GameController game, IPlayer player)
+{
+    var movablePositions = game.GetMovablePositions();
+
+    var movablePieces = GetPlayerPieces(game, player)
+        .Where(p => movablePositions.Contains(game.GetPosition(p)))
+        .OrderBy(p => p.Id)
+        .ToList();
+
+    if (movablePieces.Count == 0)
+        return;
+
+    // Automatically move only when exactly one piece is movable,
+    // it is not in Base, and its square contains only one piece.
+    if (movablePieces.Count == 1)
+    {
+        IPiece piece = movablePieces[0];
+        Coordinate coordinate = game.FindCell(piece.Id);
+
+        bool isInBase = game.GetState(piece) == PieceState.Base;
+        bool isStacked = game.board.Cells[coordinate.Row, coordinate.Col]
+            .Pieces.Count > 1;
+
+        if (!isInBase && !isStacked)
+        {
+            MoveResult automaticResult =
+                game.MovePieceById(player.Id, piece.Id);
+
+            if (!automaticResult.Success)
+                throw new InvalidOperationException(automaticResult.Error);
+
+            return;
+        }
+    }
+
+    Console.WriteLine("\nChoose a piece to move:");
+
+    for (int i = 0; i < movablePieces.Count; i++)
+    {
+        IPiece piece = movablePieces[i];
+        int position = game.GetPosition(piece);
+        Coordinate coordinate = game.FindCell(piece.Id);
+
+        string state = game.GetState(piece) == PieceState.Base
+            ? "Base"
+            : $"Position {position}";
+
+        Console.WriteLine(
+            $"{i + 1}. Piece #{piece.Id} | {state} | " +
+            $"Board ({coordinate.Row}, {coordinate.Col})");
+    }
+
+    while (true)
+    {
+        Console.Write($"Select a piece (1-{movablePieces.Count}): ");
+
+        if (int.TryParse(Console.ReadLine(), out int choice) &&
+            choice >= 1 && choice <= movablePieces.Count)
+        {
+            MoveResult result =
+                game.MovePieceById(player.Id, movablePieces[choice - 1].Id);
+
+            if (!result.Success)
+                throw new InvalidOperationException(result.Error);
+
+            return;
+        }
+
+        Console.WriteLine("Invalid selection. Try again.");
+    }
+}
+
+// int SelectPieceToMove(GameController game, IPlayer currentPlayer)
+// {
+//     List<int> movablePositions = game.GetMovablePositions();
+
+//     var movablePieces = Enumerable.Range(0, 4)
+//         .Select(n => game.GetPiece(currentPlayer.Id * 4 + n))
+//         .Where(piece => movablePositions.Contains(game.GetPosition(piece)))
+//         .OrderBy(piece => piece.Id)
+//         .ToList();
+
+//     if (movablePieces.Count == 0)
+//         throw new InvalidOperationException("No movable pieces available.");
+
+//     Console.WriteLine("\nChoose a piece to move:");
+
+//     for (int i = 0; i < movablePieces.Count; i++)
+//     {
+//         IPiece piece = movablePieces[i];
+//         int position = game.GetPosition(piece);
+//         Coordinate coordinate = game.FindCell(piece.Id);
+
+//         Console.WriteLine(
+//             $"{i + 1}. Piece #{piece.Id} | " +
+//             $"Relative position: {position} | " +
+//             $"Board: ({coordinate.Row}, {coordinate.Col})");
+//     }
+
+//     while (true)
+//     {
+//         Console.Write($"Select a piece (1-{movablePieces.Count}): ");
+//         string? input = Console.ReadLine();
+
+//         if (int.TryParse(input, out int choice) &&
+//             choice >= 1 && choice <= movablePieces.Count)
+//         {
+//             return game.GetPosition(movablePieces[choice - 1]);
+//         }
+
+//         Console.WriteLine("Invalid selection. Please choose a listed number.");
+//     }
+// }
+
+// void MovablePieceRelativeAndCoordinatePosition(GameController game, int relativePosition)
+// {
+//     IPiece piece = game.players
+//         .SelectMany(p => Enumerable.Range(0, 4)
+//             .Select(n => game.GetPiece(p.Id * 4 + n)))
+//         .First(p => game.GetPosition(p) == relativePosition);
+
+//     Coordinate coordinate = game.FindCell(piece.Id);
+
+//     Console.WriteLine(
+//         $"Piece #{piece.Id}, relative position {relativePosition}, " +
+//         $"board coordinate ({coordinate.Row}, {coordinate.Col})");
+// }
+
+
+List<IPlayer> GetInitializePlayers()
+{
+    int id = 1;
+    List<IPlayer> players = [];
+
+    Dictionary<string, PlayerColor> playerColorChoices = new()
+    {
+        { "R", PlayerColor.Red },
+        { "G", PlayerColor.Green },
+        { "B", PlayerColor.Blue },
+        { "Y", PlayerColor.Yellow }
+    };
+
+    while (players.Count < 4)
+    {
+        Console.Write($"Enter player {players.Count + 1} name");
+
+        if (players.Count >= 2)
+            Console.Write(" (press Enter to finish)");
+
+        Console.Write(": ");
+
+        string? name = Console.ReadLine();
+
+        // Allow finishing once there are at least 2 players
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            if (players.Count >= 2)
+                break;
+
+            Console.WriteLine("You need at least 2 players.");
+            continue;
+        }
+
+        PlayerColor color;
+
+        while (true)
+        {
+            // Get colors that have not been chosen
+            var availableColors = playerColorChoices
+                .Where(c => !players.Any(p => p.Color == c.Value))
+                .ToDictionary(c => c.Key, c => c.Value);
+            Console.WriteLine($"Available colors: {string.Join(", ", availableColors.Keys)}");
+            Console.Write("Choose player color: ");
+            string? input = Console.ReadLine()?.Trim().ToUpper();
+
+            if (input != null &&
+                playerColorChoices.TryGetValue(input, out color))
+            {
+                // Check if another player already uses this color
+                if (players.Any(p => p.Color == color))
+                {
+                    Console.WriteLine("This color has already been chosen. Pick another.");
+                    continue;
+                }
+
+                break;
+            }
+            Console.WriteLine("Invalid or unavailable color. Please choose an available color.");
+        }
+
+        players.Add(new Player(id++, name, color));
+    }
+
+    return players;
+}
+
+void StandardCLIPlay()
+{
+    List<IPlayer> players = GetInitializePlayers();
+    GameController game = new GameController(players);
+    SubscribeEvent(game);
+    game.StartGame();
+
+    while (game.Phase != TurnPhase.Finished)
+    {
+        // DrawBoard((Board)game.board, game, players);
+        IPlayer currentPlayer = game.GetCurrentPlayer();
+        Console.Write($"{currentPlayer.Color} player {currentPlayer.Name} can roll dice, press enter to roll... ");
+        Console.ReadLine();
+        game.RollDice(currentPlayer.Id);
+        if (game.Phase == TurnPhase.WaitingForMove)
+        {
+            var positions = game.GetMovablePositions();
+
+            if (positions.Count > 0)
+            {
+                SelectAndMovePiece(game, currentPlayer);
+            }
+        }
+        DrawBoard((Board)game.board, game, players);
+        Console.ReadLine();
+    }
+    
+    Console.WriteLine("\n=== FINAL RANKINGS ===");
+    for (int i = 0; i < game.Rankings.Count; i++)
+    {
+        Console.WriteLine(
+            $"{i + 1}. {game.Rankings[i].Name} ({game.Rankings[i].Color})");
+    }
+    IPlayer lastPlayer = players
+        .First(p => !game.Rankings.Any(r => r.Id == p.Id));
+    Console.WriteLine(
+        $"Last place: {lastPlayer.Name} ({lastPlayer.Color})");
+}
+
+
+void AutoPlay(int playerCount = 4)
+{
+    if (playerCount < 2 || playerCount > 4)
+        throw new ArgumentOutOfRangeException(
+            nameof(playerCount), "Player count must be between 2 and 4.");
+
+    PlayerColor[] colors =
+    [
+        PlayerColor.Red,
+        PlayerColor.Green,
+        PlayerColor.Blue,
+        PlayerColor.Yellow
+    ];
+
+    List<IPlayer> players = Enumerable.Range(1, playerCount)
+        .Select(i => (IPlayer)new Player(
+            i,
+            $"AI-{colors[i - 1]}",
+            colors[i - 1]))
+        .ToList();
+
+    GameController game = new GameController(players);
+
+    // SubscribeEvent(game);
+    game.OnPlayerFinished += (playerId, rank) =>
+        Console.WriteLine(
+            $"[FINISH] {game.GetPlayer(playerId).Name} placed #{rank}");
+
+    game.OnGameEnded += _ =>
+        Console.WriteLine("[GAME ENDED]");
+
+    game.StartGame();
+
+    Random random = new Random();
+    int maxActions = 90_000;
+
+    while (game.Phase != TurnPhase.Finished && maxActions-- > 0)
+    {
+        IPlayer currentPlayer = game.GetCurrentPlayer();
+
+        if (game.Phase == TurnPhase.WaitingForRoll)
+        {
+            game.RollDice(currentPlayer.Id);
+            continue;
+        }
+
+        if (game.Phase == TurnPhase.WaitingForMove)
+        {
+            var movablePositions = game.GetMovablePositions();
+
+            var movablePieces = GetPlayerPieces(game, currentPlayer)
+                .Where(p => movablePositions.Contains(game.GetPosition(p)))
+                .ToList();
+
+            if (movablePieces.Count == 0)
+                continue;
+
+            IPiece selectedPiece =
+                movablePieces[random.Next(movablePieces.Count)];
+
+            MoveResult result = game.MovePieceById(
+                currentPlayer.Id,
+                selectedPiece.Id);
+
+            if (!result.Success)
+                throw new InvalidOperationException(result.Error);
+        }
+    }
+
+    if (maxActions <= 0)
+        Console.WriteLine("Stopped: action limit reached.");
+
+    Console.WriteLine("\n=== FINAL RANKINGS ===");
+
+    for (int i = 0; i < game.Rankings.Count; i++)
+    {
+        IPlayer player = game.Rankings[i];
+        Console.WriteLine(
+            $"{i + 1}. {player.Name} ({player.Color})");
+    }
+
+    IPlayer? lastPlayer = players.FirstOrDefault(
+        p => !game.Rankings.Any(r => r.Id == p.Id));
+
+    if (lastPlayer != null)
+        Console.WriteLine($"Last place: {lastPlayer.Name} ({lastPlayer.Color})");
+}
+
+
+StandardCLIPlay();
+// AutoPlay(3);
+
+// List<IPlayer> players = [
+//     new Player(0, "Alice", PlayerColor.Red),
+//     new Player(1, "Budi", PlayerColor.Green),
+//     new Player(2, "Citra", PlayerColor.Yellow),
+//     new Player(3, "Dewi", PlayerColor.Blue)
+// ];
+
+// var game = new GameController(players);
+// SubscribeEvent(game);
+// game.StartGame();
+
+// while (game.GetFinishedPlayer() is null)
+// {
+
+//     Player currentPlayer = (Player)game.GetCurrentPlayer();
+
+
+//     game.RollDice(currentPlayer.Id);
+
+//     if (game.Phase == TurnPhase.WaitingForMove)
+//     {
+//         var positions = game.GetMovablePositions();
+
+//         if (positions.Count > 0)
+//         {
+//             MovablePieceRelativeAndCoordinatePosition(game, positions[^1]);
+//             MoveResult result = game.MovePiece(currentPlayer.Id, positions[^1]);
+
+//             if (!result.Success)
+//                 throw new InvalidOperationException(result.Error);
+//         }
+//     }
+//     DrawBoard((Board)game.board, game, players);
+//     Console.ReadLine();
+// }
+
+// Console.WriteLine($"Winner: {game.GetFinishedPlayer()!.Name}");
+
+// Board board = new Board();
+// Board.Cells to print the Cell UI
+
+// System.Console.WriteLine("board.Cells");
+// int null_counter = 0;
+// foreach (var item in board.Cells)
+// {
+//     if (item == null)
+//     {
+//         null_counter++;
+//     }
+//     else
+//     {
+//         if (null_counter > 0)
+//         {
+//             System.Console.WriteLine(null_counter);
+//             null_counter = 0;        
+//         }
+//         System.Console.WriteLine(item);    
+//     }
+// }
+// System.Console.WriteLine(null_counter);
+
+
+
+// 52 Coordinate Outer Track
+// System.Console.WriteLine();
+// System.Console.WriteLine($"{board.Track}, count {board.Track.Count}");
+// foreach (var item in board.Track)
+// {
+//     System.Console.WriteLine(item);
+// }
+// System.Console.WriteLine();
+
+
+
+// System.Console.WriteLine(board.StartIndex);
+// System.Console.WriteLine();
+// System.Console.WriteLine(board.HomeStretch);
+// System.Console.WriteLine();
+// System.Console.WriteLine(board.BaseCells);
+
+IDice dice = new Dice(6);

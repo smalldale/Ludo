@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+    theme: light --default;
+}
+
+@source "../Components/**/*.razor";
