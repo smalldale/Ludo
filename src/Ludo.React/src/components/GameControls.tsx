@@ -1,41 +1,41 @@
-// Create a game and roll the dice
+// Start a fresh game and roll the dice for the current turn.
 
 type GameAction = 'create' | 'roll' | 'move'
 
 type Props = {
   loading: boolean
   activeAction: GameAction | null
-  hasGame: boolean
-  onCreateGame: () => void
+  canRoll: boolean
+  onNewGame: () => void
   onRollDice: () => void
 }
 
 export default function GameControls({
   loading,
   activeAction,
-  hasGame,
-  onCreateGame,
+  canRoll,
+  onNewGame,
   onRollDice,
 }: Props) {
   return (
     <div className="flex flex-wrap gap-3">
       <button
-        className="btn btn-primary"
-        onClick={onCreateGame}
+        type="button"
+        className="btn btn-outline"
+        onClick={onNewGame}
         disabled={loading}
       >
-        {activeAction === 'create' ? 'Creating game...' : 'Create Game'}
+        New Game
       </button>
 
-      {hasGame && (
-        <button
-          className="btn btn-secondary"
-          onClick={onRollDice}
-          disabled={loading}
-        >
-          {activeAction === 'roll' ? 'Rolling dice...' : 'Roll Dice'}
-        </button>
-      )}
+      <button
+        type="button"
+        className="btn btn-primary"
+        onClick={onRollDice}
+        disabled={loading || !canRoll}
+      >
+        {activeAction === 'roll' ? 'Rolling dice...' : 'Roll Dice'}
+      </button>
     </div>
   )
 }

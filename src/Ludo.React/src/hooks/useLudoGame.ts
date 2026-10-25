@@ -9,10 +9,20 @@ import {
   rollDice,
   movePiece,
 } from '../api/games'
-import type { GameStateDto } from '../types/game'
+import type {
+  CreatePlayerRequest,
+  GameStateDto,
+} from '../types/game'
 
 export function useLudoGame() {
   const [game, setGame] = useState<GameStateDto | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  type GameAction = 'create' | 'roll' | 'move'
+  const [activeAction, setActiveAction] = useState<GameAction | null>(null)
+  const loading = activeAction !== null
+  const [diceRoll, setDiceRoll] = useState<number | null>(null)
+  const [selectedPieceId, setSelectedPieceId] = useState<number | null>(null)
+
   useEffect(() => {
     async function restoreGame() {
       const savedGameId = localStorage.getItem('ludoGameId')
@@ -26,6 +36,11 @@ export function useLudoGame() {
         const savedGame = await getGame(savedGameId)
         setGame(savedGame)
       } catch (err) {
+        // A deleted game should not keep failing on every reload.
+        if (err instanceof Error && err.message.includes('(404)')) {
+          localStorage.removeItem('ludoGameId')
+        }
+
         setError(
           err instanceof Error
             ? err.message
@@ -38,31 +53,25 @@ export function useLudoGame() {
 
     void restoreGame()
   }, [])
-  
-  const [error, setError] = useState<string | null>(null)
-  type GameAction = 'create' | 'roll' | 'move'
-  const [activeAction, setActiveAction] = useState<GameAction | null>(null)
-  const loading = activeAction !== null
-  const [diceRoll, setDiceRoll] = useState<number | null>(null)
-  const [selectedPieceId, setSelectedPieceId] = useState<number | null>(null)
 
-  async function handleCreateGame() {
+  async function handleCreateGame(players: CreatePlayerRequest[]) {
+    if (loading) return
+
     setActiveAction('create')
     setError(null)
+    setDiceRoll(null)
+    setSelectedPieceId(null)
 
     try {
       const response = await createGame({
-        players: [
-          { name: 'Alice', color: 'Red' },
-          { name: 'Bob', color: 'Green' },
-        ],
+        players: players.map((player) => ({
+          name: player.name.trim(),
+          color: player.color,
+        })),
       })
 
       localStorage.setItem('ludoGameId', response.state.gameId)
       setGame(response.state)
-      
-      setDiceRoll(null)
-      setSelectedPieceId(null)
     } catch (err) {
       setError(
         err instanceof Error
@@ -72,6 +81,16 @@ export function useLudoGame() {
     } finally {
       setActiveAction(null)
     }
+  }
+
+  function handleResetGame() {
+    if (loading) return
+
+    localStorage.removeItem('ludoGameId')
+    setGame(null)
+    setError(null)
+    setDiceRoll(null)
+    setSelectedPieceId(null)
   }
 
   async function handleJoinGame(gameId: string) {
@@ -105,6 +124,7 @@ export function useLudoGame() {
 
     setActiveAction('roll')
     setError(null)
+    setDiceRoll(null)
     setSelectedPieceId(null)
 
     try {
@@ -192,6 +212,7 @@ export function useLudoGame() {
     selectedPieceId,
     handleCreateGame,
     handleJoinGame,
+    handleResetGame,
     handleRollDice,
     handleMovePiece,
   }
