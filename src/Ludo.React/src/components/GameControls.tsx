@@ -85,7 +85,7 @@ export default function GameControls({
     <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
-        className="btn btn-outline gap-2"
+        className="btn btn-outline btn-lg gap-2"
         onClick={onNewGame}
         disabled={loading}
       >
