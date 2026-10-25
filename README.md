@@ -2,7 +2,7 @@
 
 A Ludo game project built with C#/.NET and React. The solution includes shared game logic, two frontend implementations (Blazor and React), a console application, and an ASP.NET Core Web API.
 
-> **Project status:** Local pass-and-play gameplay through the React frontend and API has been tested. Step-by-step piece animation is in progress. Online multiplayer authentication and real-time synchronization are not complete.
+> **Project status:** Local pass-and-play gameplay through the React frontend and API has been tested. Step-by-step piece animation is in progress. <!--Online multiplayer authentication and real-time synchronization are not complete. -->
 
 ## Project Structure
 
@@ -64,9 +64,11 @@ The Blazor application is the .NET-based frontend. It uses Razor components and 
 
 The React application is a separate frontend built with React, TypeScript, and Vite. It communicates with the ASP.NET Core API for game operations.
 
-**Screenshot placeholder**
+<!--
+**Screenshot**
 
 > Add a screenshot of the React Ludo board here.
+-->
 
 <!-- Replace the placeholder above with an image, for example:
 ![React frontend screenshot](docs/images/react-frontend.png)
@@ -143,15 +145,17 @@ dotnet run --project src/Ludo.Console
 
 Follow the instructions printed by the console application.
 
+<!--  
 **Console output placeholder**
 
 Add a screenshot or text capture of a representative console session here.
 
-<!-- Example:
+Example:
 ```text
 Paste representative Ludo.Console output here.
 ```
 -->
+
 ```Enter player 1 name: Alice
 Alice chose Red.
 Enter player 2 name: Bob
@@ -181,7 +185,8 @@ Enter player 3 name (press Enter to finish):
 ╰───────────────────────────────────────────────────────────────────────────────╯
 ───────────────────────────────── Alice's turn ──────────────────────────────────
 Player: Alice
-Press Enter to roll the dice...```
+Press Enter to roll the dice...
+```
 
 ## API Overview
 
@@ -219,9 +224,11 @@ npm run build
 - Keep generated `.NET` `bin/` and `obj/` directories and Node `node_modules/` and `dist/` out of Git using the root `.gitignore`.
 - Keep credentials and local secrets out of source control.
 
+<!--
 ### Multiplayer and Security
 
 The current React workflow is intended for local, same-browser pass-and-play testing. Player-token validation was removed during local testing. **Do not expose this API publicly or treat it as secure for online multiplayer** until player authentication/authorization and appropriate real-time synchronization are implemented and tested.
+-->
 
 ### Piece Animation
 
@@ -244,7 +251,7 @@ If generated files were staged before adding `.gitignore`, review `git status` c
 - [x] Local React + API game creation, dice rolling, and piece movement
 - [x] Root `.gitignore`
 - [ ] Add screenshots for the React and Blazor frontends
-- [ ] Add representative console output
+- [x] Add representative console output
 - [ ] Connect step-by-step piece animation to the board
 - [ ] Polish board rendering and interaction
 - [ ] Restore player authentication before online multiplayer
