@@ -4,6 +4,7 @@ import LudoBoard from './components/LudoBoard'
 import GameStatus from './components/GameStatus'
 import GameControls from './components/GameControls'
 import PlayerSetup from './components/PlayerSetup'
+import { getPlayerTheme } from './helpers/playerTheme'
 import type { CreatePlayerRequest } from './types/game'
 import './App.css'
 
@@ -30,6 +31,12 @@ function App() {
     () => INITIAL_PLAYERS.map((player) => ({ ...player })),
   )
   const [isAnimating, setIsAnimating] = useState(false)
+
+  const currentPlayer = game?.players.find(
+    (player) => player.id === game.currentPlayerId,
+  )
+  const turnTheme = getPlayerTheme(currentPlayer?.color)
+  const isFinished = game?.phase === 'Finished'
 
   const handleAnimationChange = useCallback((animating: boolean) => {
     setIsAnimating(animating)
@@ -65,6 +72,30 @@ function App() {
             <p className="mt-1 text-base-content/70">
               Roll the dice and move your pieces to victory.
             </p>
+
+            {game && currentPlayer && (
+              <div
+                className={`mt-3 inline-flex flex-wrap items-center gap-2 rounded-full border px-3 py-1.5 text-sm shadow-sm ${turnTheme.soft} ${turnTheme.border}`}
+              >
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${turnTheme.dot} ${
+                    isFinished ? '' : 'animate-pulse'
+                  }`}
+                  aria-hidden="true"
+                />
+                <span className="text-base-content/60">
+                  {isFinished ? 'Game finished' : 'Current turn'}
+                </span>
+                <span className="font-bold">{currentPlayer.name}</span>
+                <span
+                  className={`badge badge-sm ${
+                    isFinished ? 'badge-neutral' : turnTheme.badge
+                  }`}
+                >
+                  {isFinished ? 'Finished' : currentPlayer.color}
+                </span>
+              </div>
+            )}
           </div>
 
           {game && (
@@ -72,6 +103,7 @@ function App() {
               loading={loading || isAnimating}
               activeAction={activeAction}
               canRoll={game.phase === 'WaitingForRoll'}
+              phase={game.phase}
               onNewGame={handleNewGame}
               onRollDice={handleRollDice}
             />
@@ -109,7 +141,11 @@ function App() {
             </section>
 
             <aside className="flex min-w-0 flex-col gap-4">
-              <GameStatus game={game} diceRoll={diceRoll} />
+              <GameStatus
+                game={game}
+                diceRoll={diceRoll}
+                animating={isAnimating}
+              />
 
               <details className="collapse collapse-arrow border border-base-300 bg-base-200">
                 <summary className="collapse-title font-medium">

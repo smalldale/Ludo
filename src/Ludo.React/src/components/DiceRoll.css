@@ -1,0 +1,55 @@
+.dice-face {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 4px;
+  width: 64px;
+  height: 64px;
+  padding: 8px;
+  border: 2px solid rgb(15 23 42 / 12%);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #ffffff, #f1f5f9);
+  box-shadow:
+    0 10px 18px -10px rgb(15 23 42 / 45%),
+    inset 0 1px 0 #fff;
+  animation: dice-pop 320ms ease-out;
+}
+
+.dice-pip {
+  place-self: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0f172a;
+  opacity: 0;
+  transform: scale(0.4);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.dice-pip-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@keyframes dice-pop {
+  0% {
+    transform: scale(0.82) rotate(-8deg);
+  }
+
+  65% {
+    transform: scale(1.08) rotate(3deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dice-face {
+    animation: none;
+  }
+}
