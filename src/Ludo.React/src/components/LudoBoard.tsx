@@ -8,11 +8,13 @@ import type {
   PlayerColor,
 } from '../types/game'
 import { getPieceCoordinate } from '../helpers/piecePosition'
+import { usePieceAnimation } from '../hooks/usePieceAnimation'
 
 type Props = {
   game: GameStateDto
   selectedPieceId: number | null
   onPieceSelect: (pieceId: number) => void
+  onAnimationChange?: (animating: boolean) => void
   loading: boolean
 }
 
@@ -61,9 +63,14 @@ export default function LudoBoard({
   game,
   selectedPieceId,
   onPieceSelect,
+  onAnimationChange,
   loading,
 }: Props) {
   const { board, pieces, movablePieces } = game
+  const { positions: displayPositions, animatingIds } =
+    usePieceAnimation(pieces, game.gameId, onAnimationChange)
+  const animatingIdSet = new Set(animatingIds)
+  const isAnimating = animatingIds.length > 0
   const boardSize = board.boardSize
   const cornerSize = Math.floor(boardSize * 0.4)
   const centerStart = cornerSize
@@ -92,7 +99,10 @@ export default function LudoBoard({
 
   for (const piece of pieces) {
     const coordinate = getPieceCoordinate(
-      piece,
+      {
+        ...piece,
+        position: displayPositions[piece.id] ?? piece.position,
+      },
       board,
       cellsByTrackPosition,
       trackLength,
@@ -217,30 +227,39 @@ export default function LudoBoard({
                   >
                     {cellPieces.map((piece) => {
                       const isMovable = movableIds.has(piece.id)
+                      const canSelect = isMovable && !isAnimating
                       const isSelected = selectedPieceId === piece.id
+                      const isAnimatingPiece = animatingIdSet.has(
+                        piece.id,
+                      )
                       const number = pieceNumber(piece)
+                      const position =
+                        displayPositions[piece.id] ?? piece.position
 
                       return (
                         <button
                           key={piece.id}
                           type="button"
-                          disabled={!isMovable}
+                          disabled={!canSelect}
                           className={[
                             'piece',
                             `piece-${piece.color.toLowerCase()}`,
-                            isMovable ? 'piece-movable' : '',
+                            canSelect ? 'piece-movable' : '',
                             isSelected ? 'piece-selected' : '',
+                            isAnimatingPiece ? 'piece-animating' : '',
                           ]
                             .filter(Boolean)
                             .join(' ')}
                           aria-label={`${piece.color} piece ${number}${
-                            isMovable ? ', movable' : ''
+                            canSelect ? ', movable' : ''
                           }`}
                           aria-pressed={isSelected}
                           title={`${piece.color} piece ${number}${
-                            isMovable ? ' - click to move' : ''
+                            canSelect ? ' - click to move' : ''
                           }`}
                           data-state={piece.state}
+                          data-piece-id={piece.id}
+                          data-position={position}
                           onClick={() => onPieceSelect(piece.id)}
                         >
                           <span className="piece-number">
@@ -270,6 +289,17 @@ export default function LudoBoard({
                 ? 'Moving piece...'
                 : 'Updating board...'}
             </span>
+          </div>
+        )}
+
+        {isAnimating && !loading && (
+          <div
+            className="board-animation-status"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="board-spinner" aria-hidden="true" />
+            Moving piece...
           </div>
         )}
       </div>

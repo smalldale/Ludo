@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useLudoGame } from './hooks/useLudoGame'
 import LudoBoard from './components/LudoBoard'
 import GameStatus from './components/GameStatus'
@@ -29,12 +29,19 @@ function App() {
   const [players, setPlayers] = useState<CreatePlayerRequest[]>(
     () => INITIAL_PLAYERS.map((player) => ({ ...player })),
   )
+  const [isAnimating, setIsAnimating] = useState(false)
+
+  const handleAnimationChange = useCallback((animating: boolean) => {
+    setIsAnimating(animating)
+  }, [])
 
   function handleStartGame() {
     void handleCreateGame(players)
   }
 
   function handleNewGame() {
+    setIsAnimating(false)
+
     if (game) {
       setPlayers(
         game.players.map((player) => ({
@@ -62,7 +69,7 @@ function App() {
 
           {game && (
             <GameControls
-              loading={loading}
+              loading={loading || isAnimating}
               activeAction={activeAction}
               canRoll={game.phase === 'WaitingForRoll'}
               onNewGame={handleNewGame}
@@ -96,6 +103,7 @@ function App() {
                 game={game}
                 selectedPieceId={selectedPieceId}
                 onPieceSelect={handleMovePiece}
+                onAnimationChange={handleAnimationChange}
                 loading={loading}
               />
             </section>
