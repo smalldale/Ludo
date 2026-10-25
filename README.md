@@ -71,6 +71,8 @@ The React application is a separate frontend built with React, TypeScript, and V
 <!-- Replace the placeholder above with an image, for example:
 ![React frontend screenshot](docs/images/react-frontend.png)
 -->
+<img width="1390" height="991" alt="image" src="https://github.com/user-attachments/assets/2b3ee6df-d492-4a21-b01e-31fa9344b0bf" />
+
 
 The Blazor and React applications are **two alternative frontends** for the project, not one frontend embedded inside the other. Both demonstrate frontend development using different approaches.
 
@@ -150,6 +152,36 @@ Add a screenshot or text capture of a representative console session here.
 Paste representative Ludo.Console output here.
 ```
 -->
+```Enter player 1 name: Alice
+Alice chose Red.
+Enter player 2 name: Bob
+Bob chose Blue.
+Enter player 3 name (press Enter to finish): 
+▶ Alice's turn (Turn 1, consecutive sixes: 0)
+╭─LUDO BOARD──────────────────────────────────────────────────────────────────╮
+│                           ·   ·   ·                                         │
+│                           ·   ·   S                                         │
+│           1   2           ✦   ·   ·           ○   ○                         │
+│           3   4           ·   ·   ·           ○   ○                         │
+│                           ·   ·   ·                                         │
+│                           ·   ·   ·                                         │
+│   ·   S   ·   ·   ·   ·       ◆       ·   ·   ·   ✦   ·   ·                 │
+│   ·   ·   ·   ·   ·   ·   ◆       ◆   ·   ·   ·   ·   ·   ·                 │
+│   ·   ·   ✦   ·   ·   ·       ◆       ·   ·   ·   ·   S   ·                 │
+│                           ·   ·   ·                                         │
+│                           ·   ·   ·                                         │
+│           5   6           ·   ·   ·           ○   ○                         │
+│           7   8           ·   ·   ✦           ○   ○                         │
+│                           S   ·   ·                                         │
+│                           ·   ·   ·                                         │
+╰─────────────────────────────────────────────────────────────────────────────╯
+╭───────────────────────────────────────────────────────────────────────────────╮
+│ Legend: ● Red  ● Green  ● Yellow  ● Blue  S Start  ✦ Safe  ○ Base  ◆ Finish   │
+│ ×N Stacked pieces                                                             │
+╰───────────────────────────────────────────────────────────────────────────────╯
+───────────────────────────────── Alice's turn ──────────────────────────────────
+Player: Alice
+Press Enter to roll the dice...```
 
 ## API Overview
 
