@@ -3,6 +3,7 @@ import { useLudoGame } from './hooks/useLudoGame'
 import LudoBoard from './components/LudoBoard'
 import GameStatus from './components/GameStatus'
 import GameControls from './components/GameControls'
+import GameResult from './components/GameResult'
 import PlayerSetup from './components/PlayerSetup'
 import { getPlayerTheme } from './helpers/playerTheme'
 import type { CreatePlayerRequest } from './types/game'
@@ -35,8 +36,13 @@ function App() {
   const currentPlayer = game?.players.find(
     (player) => player.id === game.currentPlayerId,
   )
-  const turnTheme = getPlayerTheme(currentPlayer?.color)
   const isFinished = game?.phase === 'Finished'
+  const winner = game?.rankings?.find((ranking) => ranking.rank === 1)
+  const winnerPlayer = winner
+    ? game?.players.find((player) => player.id === winner.playerId)
+    : undefined
+  const displayPlayer = (isFinished ? winnerPlayer : undefined) ?? currentPlayer
+  const turnTheme = getPlayerTheme(displayPlayer?.color)
 
   const handleAnimationChange = useCallback((animating: boolean) => {
     setIsAnimating(animating)
@@ -73,7 +79,7 @@ function App() {
               Roll the dice and move your pieces to victory.
             </p>
 
-            {game && currentPlayer && (
+            {game && displayPlayer && (
               <div
                 className={`mt-3 inline-flex flex-wrap items-center gap-2 rounded-full border px-3 py-1.5 text-sm shadow-sm ${turnTheme.soft} ${turnTheme.border}`}
               >
@@ -84,15 +90,15 @@ function App() {
                   aria-hidden="true"
                 />
                 <span className="text-base-content/60">
-                  {isFinished ? 'Game finished' : 'Current turn'}
+                  {isFinished ? 'Winner' : 'Current turn'}
                 </span>
-                <span className="font-bold">{currentPlayer.name}</span>
+                <span className="font-bold">{displayPlayer.name}</span>
                 <span
                   className={`badge badge-sm ${
-                    isFinished ? 'badge-neutral' : turnTheme.badge
+                    isFinished ? 'badge-warning' : turnTheme.badge
                   }`}
                 >
-                  {isFinished ? 'Finished' : currentPlayer.color}
+                  {isFinished ? 'Champion' : displayPlayer.color}
                 </span>
               </div>
             )}
@@ -113,6 +119,12 @@ function App() {
         {error && (
           <div className="alert alert-error mb-6" role="alert">
             <span>{error}</span>
+          </div>
+        )}
+
+        {game?.phase === 'Finished' && (
+          <div className="mb-6">
+            <GameResult game={game} />
           </div>
         )}
 

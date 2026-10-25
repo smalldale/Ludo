@@ -16,8 +16,13 @@ export default function GameStatus({
   const currentPlayer = game.players.find(
     (player) => player.id === game.currentPlayerId,
   )
-  const theme = getPlayerTheme(currentPlayer?.color)
   const isFinished = game.phase === 'Finished'
+  const winner = game.rankings?.find((ranking) => ranking.rank === 1)
+  const winnerPlayer = winner
+    ? game.players.find((player) => player.id === winner.playerId)
+    : undefined
+  const displayPlayer = (isFinished ? winnerPlayer : undefined) ?? currentPlayer
+  const theme = getPlayerTheme(displayPlayer?.color)
 
   const instruction = animating
     ? 'Moving the piece...'
@@ -58,7 +63,7 @@ export default function GameStatus({
           ? 'Finished'
           : game.phase
 
-  const initial = currentPlayer?.name.trim().charAt(0).toUpperCase() || '?'
+  const initial = displayPlayer?.name.trim().charAt(0).toUpperCase() || '?'
 
   return (
     <section className="card border border-base-300 bg-base-200 shadow-lg">
@@ -68,19 +73,19 @@ export default function GameStatus({
           <span className={`badge badge-sm ${phaseBadge}`}>{phaseLabel}</span>
         </div>
 
-        {currentPlayer ? (
+        {displayPlayer ? (
           <div
             className={`rounded-box border p-4 ${theme.soft} ${theme.border}`}
             aria-live="polite"
           >
             <div className="flex items-center justify-between gap-2">
               <p className="whitespace-nowrap text-xs font-semibold uppercase tracking-[0.16em] text-base-content/60">
-                {isFinished ? 'Final player' : 'Current turn'}
+                {isFinished ? 'Winner' : 'Current turn'}
               </p>
 
               <span
                 className={`badge badge-sm gap-1.5 ${
-                  isFinished ? 'badge-neutral' : theme.badge
+                  isFinished ? 'badge-warning' : theme.badge
                 }`}
               >
                 {!isFinished && (
@@ -89,7 +94,7 @@ export default function GameStatus({
                     aria-hidden="true"
                   />
                 )}
-                {isFinished ? 'Finished' : 'Playing'}
+                {isFinished ? 'Champion' : 'Playing'}
               </span>
             </div>
 
@@ -102,10 +107,10 @@ export default function GameStatus({
 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-2xl font-black leading-tight">
-                  {currentPlayer.name}
+                  {displayPlayer.name}
                 </p>
                 <p className="text-sm text-base-content/70">
-                  {currentPlayer.color} player
+                  {displayPlayer.color} player
                 </p>
               </div>
             </div>
@@ -126,7 +131,7 @@ export default function GameStatus({
                 className={`h-3 w-3 rounded-full ${theme.dot}`}
                 aria-hidden="true"
               />
-              {currentPlayer?.color ?? 'Unknown'}
+              {displayPlayer?.color ?? 'Unknown'}
             </p>
           </div>
 

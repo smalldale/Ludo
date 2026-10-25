@@ -108,6 +108,7 @@ public sealed class GameApplicationService
                     .ToList(),
                 CreateMovablePieceSnapshots(controller),
                 CreatePieceSnapshots(controller),
+                CreateRankings(controller),
                 CreateBoardSnapshot(controller)
             ),
             controller.players
@@ -362,8 +363,47 @@ public sealed class GameApplicationService
             players,
             movablePositions,
             CreatePieceSnapshots(controller),
+            CreateRankings(controller),
             CreateBoardSnapshot(controller)
         );
+    }
+
+    private static IReadOnlyList<RankingDto> CreateRankings(
+        GameController controller)
+    {
+        var rankings = controller.Rankings
+            .Select((player, index) => new RankingDto(
+                index + 1,
+                player.Id,
+                player.Name,
+                player.Color.ToString(),
+                true))
+            .ToList();
+
+        if (controller.Phase != TurnPhase.Finished)
+        {
+            return rankings;
+        }
+
+        // The game ends when all but one player have finished. Add the
+        // remaining player as the final place so the UI can show a complete
+        // ranking table.
+        var rankedPlayerIds = rankings
+            .Select(ranking => ranking.PlayerId)
+            .ToHashSet();
+
+        foreach (var player in controller.players
+                     .Where(player => !rankedPlayerIds.Contains(player.Id)))
+        {
+            rankings.Add(new RankingDto(
+                rankings.Count + 1,
+                player.Id,
+                player.Name,
+                player.Color.ToString(),
+                false));
+        }
+
+        return rankings;
     }
 
     private static IReadOnlyList<MovablePieceDto> CreateMovablePieceSnapshots(

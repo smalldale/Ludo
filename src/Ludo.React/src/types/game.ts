@@ -16,6 +16,14 @@ export interface PlayerDto {
   color: PlayerColor
 }
 
+export interface RankingDto {
+  rank: number
+  playerId: number
+  name: string
+  color: PlayerColor
+  finished: boolean
+}
+
 export interface PieceDto {
   id: number
   color: PlayerColor
@@ -57,6 +65,7 @@ export interface GameStateDto {
   players: PlayerDto[]
   movablePieces: MovablePieceDto[]
   pieces: PieceDto[]
+  rankings: RankingDto[]
   board: BoardDto
 }
 

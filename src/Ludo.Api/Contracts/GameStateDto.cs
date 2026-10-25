@@ -8,5 +8,6 @@ public sealed record GameStateDto(
     IReadOnlyList<PlayerDto> Players,
     IReadOnlyList<MovablePieceDto> MovablePieces,
     IReadOnlyList<PieceDto> Pieces,
+    IReadOnlyList<RankingDto> Rankings,
     BoardDto Board
 );
