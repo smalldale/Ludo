@@ -6,21 +6,21 @@ namespace Ludo.Core.Application;
 
 public class GameController
 {
-    private const int FinishPosition = 56; // addons, index finished relative position
-    private const int HomeColumnStart = 51; // addons, index home column/scretch start relative position.
-    private const int LastTrackPosition = 50; // addons, index last outerRing track relative position.
+    private const int FinishPosition = 56; // addons, index finished relative position (home triangle)
+    private const int HomeColumnStart = 51; // addons, start index home scretch relative position.
+    private const int LastTrackPosition = 50; // addons,  last index outerRing track relative position.
     public List<IPlayer> players = [];
     public IBoard board;
     public IDice dice;
     public Dictionary<int, PlayerColor> playerColors = new Dictionary<int, PlayerColor>();
     private Dictionary<PlayerColor, List<IPiece>> piecesByColor;
-    private int currentTurnIndex;
+    private int currentTurnIndex; // current player turn index
     private int pendingRoll; // Pending roll dice, 0 = no roll.
     public int Turn { get; private set; }  // 0 = not started, then 1, 2, 3...
     public TurnPhase Phase { get; private set; } = TurnPhase.WaitingForRoll; // Current Phase Move (WaitingForRoll, WaitingForMove, Finished)
 
     public int ConsecutiveSixes { get; private set; } // Count consecutive sixes of current player turn.
-    public List<IPlayer> Rankings { get; } = [];
+    public List<IPlayer> Rankings { get; } = []; // addons
 
     public event Action<int, int>? OnDiceRolled; // (playerid, roll)
     public event Action<int, int>? OnNoMovablePieces; // (playerid, roll) addons
@@ -29,13 +29,6 @@ public class GameController
     public event Action<int>? OnTurnChanged; // currentPlayerId
     public event Action<int, int>? OnPlayerFinished; // (playerId, rank)
     public event Action<int>? OnGameEnded; // winnerPlayerId
-
-    // addons
-    public GameController(List<IPlayer> players)
-        : this(players, new Board(), new Dice(6), new Dictionary<PlayerColor, List<IPiece>>())
-    {
-        
-    }
     
     public GameController(List<IPlayer> players, IBoard board, IDice dice,
         Dictionary<PlayerColor, List<IPiece>> piecesByColor)
@@ -52,25 +45,21 @@ public class GameController
         {
             throw new ArgumentException("Player ids must be unique.", nameof(players));
         }
-        this.players = new List<IPlayer>(players);
+        this.players = players;
         this.board = board;
         this.dice = dice;
         this.piecesByColor = piecesByColor;
 
-        if (this.piecesByColor.Count != this.players.Count * 4)
+        foreach (IPlayer player in this.players)
         {
-            this.piecesByColor.Clear();
-            foreach (IPlayer player in this.players)
+            playerColors[player.Id] = player.Color;
+
+            List<IPiece> pieces = this.piecesByColor[player.Color];
+
+            for (int i = 0; i < pieces.Count; i++)
             {
-                playerColors[player.Id] = player.Color;
-                List<IPiece> pieces = [];
-                for (int i = 0; i < 4; i++)
-                {
-                    IPiece piece = new Piece((player.Id - 1) * 4 + i + 1, player.Color);
-                    pieces.Add(piece);
-                    GetCell(board.BaseCells[player.Color][i]).Pieces.Add(piece);
-                }
-                this.piecesByColor[player.Color] = pieces;
+                Coordinate baseCell = board.BaseCells[player.Color][i];
+                GetCell(baseCell).Pieces.Add(pieces[i]);
             }
         }
     }
@@ -153,8 +142,15 @@ public class GameController
             .Select(piece => piece.Id)
             .ToList();
 
-    private MoveResult MovePieceCore(int playerId, IPiece? piece) // addons
+    /// <summary>
+    /// Move a piece by Piece.id
+    /// </summary>
+    /// <param name="playerId">Player.id</param>
+    /// <param name="pieceId">Piece.id</param>
+    /// <returns></returns>
+    public MoveResult MovePieceById(int playerId, int pieceId) // addons
     {
+        IPiece? piece = GetMovablePieces().FirstOrDefault(p => p.Id == pieceId);
         if (Phase != TurnPhase.WaitingForMove)
         {
             return MoveResult.Fail("Roll the dice first");
@@ -188,8 +184,8 @@ public class GameController
         if (destination != null)
         {
             // Remove selected piece that want to move
-            // Place piece to destination coordinate
             GetCell(FindCell(piece.Id)).Pieces.Remove(piece);
+            // Place piece to destination coordinate
             GetCell(destination.Value).Pieces.Add(piece);
         }
 
@@ -216,31 +212,6 @@ public class GameController
         bool extraTurn = GrantsExtraTurn(roll, isCaptured, isFinished);
         EndTurn(extraTurn);
         return new MoveResult(true, piece.Id, isCaptured, true, extraTurn, null);
-    }
-
-    /// <summary>
-    /// Move a piece from piece position
-    /// </summary>
-    /// <param name="playerId">current player id turn</param>
-    /// <param name="position">piece relative position that want to move</param>
-    /// <returns></returns>
-    public MoveResult MovePiece(int playerId, int position)
-    {
-        IPiece? piece = GetMovablePieces()
-            .Where(p => GetPosition(p) == position)
-            .OrderBy(p => p.Id)
-            .FirstOrDefault();
-        if (piece is null)
-        {
-            return MovePieceCore(playerId, null);
-        }
-        return MovePieceCore(playerId, piece);
-    }
-
-    public MoveResult MovePieceById(int playerId, int pieceId) // addons
-    {
-        IPiece? piece = GetMovablePieces().FirstOrDefault(p => p.Id == pieceId);
-        return MovePieceCore(playerId, piece);
     }
 
     public IPlayer GetPlayer(int playerId) =>
@@ -293,8 +264,6 @@ public class GameController
     /// <returns>boolean</returns>
     private bool GrantsExtraTurn(int roll, bool captured, bool finished) => roll == 6 || captured || finished;
     
-    private bool IsTripleSix(int count) => count >= 3;
-    
     private bool CanFinish(int stepLeft, int roll) => stepLeft == roll;
 
     /// <summary>
@@ -305,7 +274,7 @@ public class GameController
     /// <returns>true if triple six</returns>
     private bool TrackRoll(int roll) {
         ConsecutiveSixes = roll == 6 ? ConsecutiveSixes + 1 : 0;
-        return IsTripleSix(ConsecutiveSixes);
+        return ConsecutiveSixes >= 3;
     }
 
     /// <summary>
