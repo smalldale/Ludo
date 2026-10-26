@@ -39,10 +39,10 @@ export default function GameResult({ game }: Props) {
   const winnerTheme = getPlayerTheme(winner.color)
 
   return (
-    <section className="card overflow-hidden border border-warning/40 bg-base-100 shadow-xl">
+    <section className="card w-full min-w-0 overflow-hidden border border-warning/40 bg-base-100 shadow-xl">
       <div className="h-2 bg-gradient-to-r from-warning via-error to-warning" />
 
-      <div className="card-body gap-5">
+      <div className="card-body min-w-0 gap-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-warning text-warning-content shadow-lg">
@@ -81,13 +81,13 @@ export default function GameResult({ game }: Props) {
             </span>
           </div>
 
-          <div className="overflow-x-auto rounded-box border border-base-300 bg-base-100">
+          <div className="min-w-0 overflow-x-auto rounded-box border border-base-300 bg-base-100">
             <table className="table table-zebra">
               <thead>
                 <tr>
                   <th className="w-20">Rank</th>
                   <th>Player</th>
-                  <th>Color</th>
+                  <th className="hidden sm:table-cell">Color</th>
                   <th className="text-right">Result</th>
                 </tr>
               </thead>
@@ -120,14 +120,14 @@ export default function GameResult({ game }: Props) {
                           </span>
                           <span className="font-bold">{ranking.name}</span>
                           {isWinner && (
-                            <span className="badge badge-sm badge-warning">
+                            <span className="badge badge-sm badge-warning hidden sm:inline-flex">
                               Champion
                             </span>
                           )}
                         </div>
                       </td>
 
-                      <td>
+                      <td className="hidden sm:table-cell">
                         <span
                           className={`badge badge-sm gap-1.5 ${theme.badge}`}
                         >

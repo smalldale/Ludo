@@ -27,6 +27,20 @@ const BASE_CORNER: Record<PlayerColor, string> = {
   Blue: 'bottom-left',
 }
 
+const BASE_SURFACE: Record<PlayerColor, string> = {
+  Red: 'bg-error/15',
+  Green: 'bg-success/15',
+  Yellow: 'bg-warning/20',
+  Blue: 'bg-info/15',
+}
+
+const BASE_BADGE: Record<PlayerColor, string> = {
+  Red: 'badge-error',
+  Green: 'badge-success',
+  Yellow: 'badge-warning',
+  Blue: 'badge-info',
+}
+
 function isBaseCorner(
   row: number,
   column: number,
@@ -142,19 +156,22 @@ export default function LudoBoard({
   const currentPlayer = game.players.find(
     (player) => player.id === game.currentPlayerId,
   )
-  const turnColor = currentPlayer?.color.toLowerCase()
+  const winner = game.rankings?.find((ranking) => ranking.rank === 1)
+  const activeColor =
+    game.phase === 'Finished' && winner ? winner.color : currentPlayer?.color
+  const turnColor = activeColor?.toLowerCase()
 
   return (
     <div
       className={[
-        'ludo-board-shell',
+        'ludo-board-shell rounded-box border border-base-300 bg-base-200',
         turnColor ? `turn-${turnColor}` : '',
       ]
         .filter(Boolean)
         .join(' ')}
     >
       <div
-        className="ludo-board"
+        className="ludo-board rounded-box border border-base-300 bg-base-100"
         role="group"
         aria-label="Ludo board"
         style={{
@@ -167,13 +184,15 @@ export default function LudoBoard({
             key={color}
             className={[
               'board-base-panel',
-              `board-base-${color.toLowerCase()}`,
+              BASE_SURFACE[color],
               `board-base-${BASE_CORNER[color]}`,
             ].join(' ')}
             aria-hidden="true"
           >
             <span className="board-base-inner" />
-            <span className="board-base-label">
+            <span
+              className={`board-base-label badge badge-sm ${BASE_BADGE[color]} max-w-[70%] truncate uppercase tracking-wide shadow-sm`}
+            >
               {playerByColor.get(color) ?? color}
             </span>
           </div>
@@ -272,7 +291,10 @@ export default function LudoBoard({
                 )}
 
                 {cellPieces.length > 1 && (
-                  <span className="cell-piece-count" aria-hidden="true">
+                  <span
+                    className="cell-piece-count badge badge-neutral badge-xs shadow-sm"
+                    aria-hidden="true"
+                  >
                     {cellPieces.length}
                   </span>
                 )}
@@ -282,9 +304,16 @@ export default function LudoBoard({
         )}
 
         {loading && (
-          <div className="board-loading" role="status" aria-live="polite">
-            <span className="board-loading-pill">
-              <span className="board-spinner" aria-hidden="true" />
+          <div
+            className="board-loading bg-base-100/60 backdrop-blur-sm"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="badge badge-neutral badge-lg gap-2 shadow-lg">
+              <span
+                className="loading loading-spinner loading-sm"
+                aria-hidden="true"
+              />
               {selectedPieceId !== null
                 ? 'Moving piece...'
                 : 'Updating board...'}
@@ -294,11 +323,14 @@ export default function LudoBoard({
 
         {isAnimating && !loading && (
           <div
-            className="board-animation-status"
+            className="board-animation-status badge badge-neutral badge-sm gap-1.5 shadow-lg"
             role="status"
             aria-live="polite"
           >
-            <span className="board-spinner" aria-hidden="true" />
+            <span
+              className="loading loading-spinner loading-xs"
+              aria-hidden="true"
+            />
             Moving piece...
           </div>
         )}
