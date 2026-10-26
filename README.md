@@ -253,7 +253,7 @@ If generated files were staged before adding `.gitignore`, review `git status` c
 - [x] Root `.gitignore`
 - [ ] Add screenshots for the React and Blazor frontends
 - [x] Add representative console output
-- [ ] Connect step-by-step piece animation to the board
-- [ ] Polish board rendering and interaction
+- [x] Connect step-by-step piece animation to the board
+- [x] Polish board rendering and interaction
 - [ ] Restore player authentication before online multiplayer
 - [ ] Implement and test real-time multiplayer synchronization
