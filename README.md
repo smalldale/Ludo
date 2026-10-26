@@ -75,8 +75,9 @@ The React application is a separate frontend built with React, TypeScript, and V
 -->
 ![React frontend screenshot](images/new_ludo_board.png)
 
-
+<!--
 The Blazor and React applications are **two alternative frontends** for the project, not one frontend embedded inside the other. Both demonstrate frontend development using different approaches.
+-->
 
 ## Run the React Frontend and API
 
