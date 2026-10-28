@@ -14,16 +14,16 @@ try
     LudoConsole ludoConsole = new(game);
     ludoConsole.Play();
 }
-catch (ArgumentOutOfRangeException ex)
-{
-    AnsiConsole.MarkupLine(
-        $"[red]Argument out of range: " +
-        $"{Markup.Escape(ex.Message)}[/]");
-}
 catch (InvalidOperationException ex)
 {
     AnsiConsole.MarkupLine(
         $"[red]Game operation failed: " +
+        $"{Markup.Escape(ex.Message)}[/]");
+}
+catch (ArgumentOutOfRangeException ex)
+{
+    AnsiConsole.MarkupLine(
+        $"[red]Argument out of range: " +
         $"{Markup.Escape(ex.Message)}[/]");
 }
 catch (ArgumentException ex)
