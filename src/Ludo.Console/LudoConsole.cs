@@ -356,12 +356,7 @@ public class LudoConsole
     void SelectAndMovePiece(IPlayer player)
     {
         IReadOnlyList<int> movablePieceIds = _game.GetMovablePieceIds();
-
-        if (movablePieceIds.Count == 0)
-        {
-            return;
-        }
-
+        
         // Automatically move only when exactly one piece is movable,
         if (movablePieceIds.Count == 1)
         {
@@ -386,7 +381,7 @@ public class LudoConsole
             {
                 IPiece piece = _game.GetPiece(pieceId);
                 int position = _game.GetPosition(piece);
-                PieceState state = _game.GetState(piece);
+                PieceState state = _game.GetPieceState(piece);
 
                 string color = piece.Color switch
                 {

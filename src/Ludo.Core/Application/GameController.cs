@@ -167,7 +167,7 @@ public class GameController
         bool isFinished = false;
 
         Coordinate? destination = null;
-        if (GetState(piece) == PieceState.Base)
+        if (GetPieceState(piece) == PieceState.Base)
         {
             destination = GetCoordinate(piece.Color, 0); // own base cell -> start cell
         }
@@ -191,7 +191,7 @@ public class GameController
 
         OnPieceMoved?.Invoke(piece.Id, GetPosition(piece));
 
-        bool isCaptured = GetState(piece) == PieceState.OnTrack && ResolveLanding(piece.Id);
+        bool isCaptured = GetPieceState(piece) == PieceState.OnTrack && ResolveLanding(piece.Id);
 
         if (isFinished && GetFinishedPlayer()?.Id == playerId)
         {
@@ -352,7 +352,7 @@ public class GameController
     }
 
     /// <summary>Derived state, from the Type of the containing cell.</summary>
-    public PieceState GetState(IPiece piece) 
+    public PieceState GetPieceState(IPiece piece) 
         => GetCell(FindCell(piece.Id)).Type switch
         {
             CellType.Base => PieceState.Base,
@@ -381,7 +381,7 @@ public class GameController
 
     private bool IsLegalMove(IPiece piece, int roll)
     {
-        switch (GetState(piece))
+        switch (GetPieceState(piece))
         {
             case PieceState.Finished:
                 return false;
