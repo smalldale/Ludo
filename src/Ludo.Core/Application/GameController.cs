@@ -16,7 +16,7 @@ public class GameController
     private Dictionary<PlayerColor, List<IPiece>> piecesByColor;
     private int currentTurnIndex; // current player turn index
     private int pendingRoll; // Pending roll dice, 0 = no roll.
-    public int Turn { get; private set; }  // 0 = not started, then 1, 2, 3...
+    public int Turn { get; private set; }  // 0 = not started, then 1, 2, 3... (Turn count overall game)
     public TurnPhase Phase { get; private set; } = TurnPhase.WaitingForRoll; // Current Phase Move (WaitingForRoll, WaitingForMove, Finished)
 
     public int ConsecutiveSixes { get; private set; } // Count consecutive sixes of current player turn.
@@ -294,6 +294,10 @@ public class GameController
         {
             ConsecutiveSixes = 0;
             currentTurnIndex = (currentTurnIndex + 1) % players.Count;
+            while (Rankings.Contains(GetCurrentPlayer()))
+            {
+                currentTurnIndex = (currentTurnIndex + 1) % players.Count;
+            }
             Turn++;
         }
         Phase = TurnPhase.WaitingForRoll;
