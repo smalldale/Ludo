@@ -89,7 +89,22 @@ public sealed class GameApplicationService
                 p.Color))
             .ToList();
 
-        GameController controller = new GameController(players);
+        IBoard board = new Board();
+        IDice dice =  new Dice(6);
+        Dictionary<PlayerColor, List<IPiece>> piecesByColor = new Dictionary<PlayerColor, List<IPiece>>();
+
+        foreach (IPlayer player in players)
+        {
+            List<IPiece> pieces = [];
+            for (int i = 0; i < 4; i++)
+            {
+                IPiece piece = new Piece((player.Id - 1) * 4 + i + 1, player.Color);
+                pieces.Add(piece);
+            }
+            piecesByColor[player.Color] = pieces;
+        }
+
+        GameController controller = new GameController(players, board, dice, piecesByColor);
         controller.StartGame();
 
         string? gameId = await RegisterGameAsync(controller, cancellationToken);
@@ -280,7 +295,7 @@ public sealed class GameApplicationService
                 piece.Id,
                 piece.Color.ToString(),
                 controller.GetPosition(piece),
-                controller.GetState(piece).ToString()))
+                controller.GetPieceState(piece).ToString()))
             .ToList();
     }
 
