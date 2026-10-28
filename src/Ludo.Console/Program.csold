@@ -151,7 +151,7 @@ void SelectAndMovePiece(GameController game, IPlayer player)
         IPiece piece = movablePieces[0];
         Coordinate coordinate = game.FindCell(piece.Id);
 
-        bool isInBase = game.GetState(piece) == PieceState.Base;
+        bool isInBase = game.GetPieceState(piece) == PieceState.Base;
         bool isStacked = game.board.Cells[coordinate.Row, coordinate.Col]
             .Pieces.Count > 1;
 
@@ -175,7 +175,7 @@ void SelectAndMovePiece(GameController game, IPlayer player)
         int position = game.GetPosition(piece);
         Coordinate coordinate = game.FindCell(piece.Id);
 
-        string state = game.GetState(piece) == PieceState.Base
+        string state = game.GetPieceState(piece) == PieceState.Base
             ? "Base"
             : $"Position {position}";
 
