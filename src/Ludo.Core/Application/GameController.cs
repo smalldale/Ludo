@@ -283,21 +283,20 @@ public class GameController
     /// </summary>
     private void ForfeitTurn() => EndTurn(false);
 
-   /// <summary>
-   /// Passes the turn to next player, or keeps it for a bonus roll.
-   /// </summary>
-   /// <param name="extraTurn">true if player got consecutive sixes < 3, otherwise false.</param>
-   private void EndTurn(bool extraTurn)
+    /// <summary>
+    /// Passes the turn to next player, or keeps it for a bonus roll.
+    /// </summary>
+    /// <param name="extraTurn">true if player got consecutive sixes < 3, otherwise false.</param>
+    private void EndTurn(bool extraTurn)
     {
         pendingRoll = 0;
         if (!extraTurn)
         {
             ConsecutiveSixes = 0;
-            currentTurnIndex = (currentTurnIndex + 1) % players.Count;
-            while (Rankings.Contains(GetCurrentPlayer()))
+            do
             {
                 currentTurnIndex = (currentTurnIndex + 1) % players.Count;
-            }
+            } while (Rankings.Contains(GetCurrentPlayer()));
             Turn++;
         }
         Phase = TurnPhase.WaitingForRoll;
