@@ -2,6 +2,7 @@ using Ludo.Core.Application;
 using Ludo.Core.Domain;
 using Ludo.Core.Domain.Interfaces;
 using Ludo.Core.Domain.Enums;
+using Serilog;
 using Spectre.Console;
 
 
@@ -9,18 +10,21 @@ public class LudoConsole
 {
     private GameController _game;
     private IBoard _board;
+    private readonly ILogger _logger;
 
-    public LudoConsole(GameController gameController)
+    public LudoConsole(GameController gameController, ILogger? logger = null)
     {
 
         _game = gameController;
         _board = _game.board;
+        _logger = logger ?? Log.ForContext<LudoConsole>();
         SubscribeEvent();
     }
 
     public void Play()
     {
         // main normal game
+        _logger.Information("Starting console game");
         _game.StartGame();
 
         while (_game.Phase != TurnPhase.Finished)
@@ -38,6 +42,11 @@ public class LudoConsole
             }
             catch (InvalidOperationException ex)
             {
+                _logger.Warning(
+                    ex,
+                    "Cannot roll dice for player {PlayerId}",
+                    currentPlayer.Id);
+
                 AnsiConsole.MarkupLine(
                     $"[yellow]Cannot roll dice: " +
                     $"{Markup.Escape(ex.Message)}[/]");
@@ -55,7 +64,8 @@ public class LudoConsole
                 }
             }
         }
-        
+
+        _logger.Information("Console game finished");
         DrawFinalRankings();
     }
     
@@ -64,6 +74,10 @@ public class LudoConsole
         _game.OnDiceRolled += (playerId, roll) =>
         {
             var player = _game.GetPlayer(playerId);
+
+            _logger.Information(
+                "Player {PlayerId} ({PlayerName}) rolled {Roll}",
+                playerId, player.Name, roll);
 
             AnsiConsole.Write(
                 new Panel(
@@ -81,6 +95,10 @@ public class LudoConsole
             IPlayer player = _game.players
                 .First(p => p.Id == playerId);
 
+            _logger.Debug(
+                "Player {PlayerId} ({PlayerName}) has no movable pieces for roll {Roll}",
+                playerId, player.Name, roll);
+
             AnsiConsole.MarkupLine(
                 $"[yellow]{Markup.Escape(player.Name)} rolled a {roll}, " +
                 "but has no movable pieces for this roll.[/]");
@@ -89,6 +107,10 @@ public class LudoConsole
         _game.OnPieceCaptured += victimPieceId =>
         {
             var piece = _game.GetPiece(victimPieceId);
+
+            _logger.Information(
+                "Piece {PieceId} ({Color}) was captured and returned to base",
+                victimPieceId, piece.Color);
 
             string color = piece.Color switch
             {
@@ -113,6 +135,10 @@ public class LudoConsole
         {
             var piece = _game.GetPiece(pieceId);
 
+            _logger.Debug(
+                "Piece {PieceId} ({Color}) moved to position {Position}",
+                pieceId, piece.Color, position);
+
             string color = GetSpectreColor(piece.Color);
 
             AnsiConsole.MarkupLine(
@@ -124,6 +150,10 @@ public class LudoConsole
         {
             var player = _game.GetPlayer(currentPlayerId);
 
+            _logger.Debug(
+                "Turn {Turn} begins for player {PlayerId} ({PlayerName})",
+                _game.Turn, currentPlayerId, player.Name);
+
             AnsiConsole.MarkupLine(
                 $"[bold cyan]▶ {Markup.Escape(player.Name)}'s turn[/] " +
                 $"[dim](Turn {_game.Turn}, consecutive sixes: {_game.ConsecutiveSixes})[/]");
@@ -133,6 +163,10 @@ public class LudoConsole
         {
             var player = _game.GetPlayer(playerId);
 
+            _logger.Information(
+                "Game ended. Winner is player {PlayerId} ({PlayerName})",
+                playerId, player.Name);
+
             AnsiConsole.Write(
                 new Rule($"[bold green]🏆 {Markup.Escape(player.Name)} wins![/]")
                     .RuleStyle("green"));
@@ -141,6 +175,10 @@ public class LudoConsole
         _game.OnPlayerFinished += (playerId, rank) =>
         {
             var player = _game.GetPlayer(playerId);
+
+            _logger.Information(
+                "Player {PlayerId} ({PlayerName}) finished in rank {Rank}",
+                playerId, player.Name, rank);
 
             AnsiConsole.Write(
                 new Rule(
@@ -365,6 +403,10 @@ public class LudoConsole
 
             if (!automaticResult.Success)
             {
+                _logger.Warning(
+                    "Automatic move failed for player {PlayerId} piece {PieceId}: {Error}",
+                    player.Id, piece.Id, automaticResult.Error);
+
                 throw new InvalidOperationException(automaticResult.Error);
             }
 
@@ -409,6 +451,10 @@ public class LudoConsole
 
         if (!result.Success)
         {
+            _logger.Warning(
+                "Move failed for player {PlayerId} piece {PieceId}: {Error}",
+                player.Id, selectedPiece, result.Error);
+
             throw new InvalidOperationException(result.Error);
         }
     }

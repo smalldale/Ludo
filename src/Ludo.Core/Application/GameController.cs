@@ -1,6 +1,7 @@
 ﻿using Ludo.Core.Domain;
 using Ludo.Core.Domain.Enums;
 using Ludo.Core.Domain.Interfaces;
+using Serilog;
 
 namespace Ludo.Core.Application;
 
@@ -16,6 +17,7 @@ public class GameController
     private Dictionary<PlayerColor, List<IPiece>> piecesByColor;
     private int currentTurnIndex; // current player turn index
     private int pendingRoll; // Pending roll dice, 0 = no roll.
+    private readonly ILogger _logger;
     public int Turn { get; private set; }  // 0 = not started, then 1, 2, 3... (Turn count overall game)
     public TurnPhase Phase { get; private set; } = TurnPhase.WaitingForRoll; // Current Phase Move (WaitingForRoll, WaitingForMove, Finished)
 
@@ -31,18 +33,25 @@ public class GameController
     public event Action<int>? OnGameEnded; // winnerPlayerId
     
     public GameController(List<IPlayer> players, IBoard board, IDice dice,
-        Dictionary<PlayerColor, List<IPiece>> piecesByColor)
+        Dictionary<PlayerColor, List<IPiece>> piecesByColor, ILogger? logger = null)
     {
+        _logger = logger ?? Log.ForContext<GameController>();
+
         if (players.Count < 2 || players.Count > 4)
         {
+            _logger.Warning(
+                "Game setup rejected: {PlayerCount} players given, 2-4 required",
+                players.Count);
             throw new ArgumentException($"Need 2-4 player to play this game, you give {players.Count} players.", nameof(players));
         }
         if (players.Select(p => p.Color).Distinct().Count() != players.Count)
         {
+            _logger.Warning("Game setup rejected: player colors are not unique");
             throw new ArgumentException("Player colors must unique.", nameof(playerColors));
         }
         if (players.Select(p => p.Id).Distinct().Count() != players.Count)
         {
+            _logger.Warning("Game setup rejected: player ids are not unique");
             throw new ArgumentException("Player ids must be unique.", nameof(players));
         }
         this.players = players;
@@ -62,6 +71,11 @@ public class GameController
                 GetCell(baseCell).Pieces.Add(pieces[i]);
             }
         }
+
+        _logger.Debug(
+            "Game created with {PlayerCount} players: {@Players}",
+            players.Count,
+            players.Select(p => new { p.Id, p.Name, p.Color }));
     }
 
     /// <summary>First player's turn, waiting for a roll.</summary>
@@ -72,6 +86,12 @@ public class GameController
         pendingRoll = 0;
         ConsecutiveSixes = 0;
         Phase = TurnPhase.WaitingForRoll;
+
+        _logger.Information(
+            "Game started. First player is {PlayerId} ({PlayerName})",
+            GetCurrentPlayer().Id,
+            GetCurrentPlayer().Name);
+
         OnTurnChanged?.Invoke(GetCurrentPlayer().Id);
     }
 
@@ -101,8 +121,17 @@ public class GameController
         pendingRoll = roll;
         OnDiceRolled?.Invoke(playerId, pendingRoll);
 
+        _logger.Information(
+            "Player {PlayerId} ({PlayerName}) rolled {Roll}",
+            playerId,
+            GetPlayer(playerId).Name,
+            roll);
+
         if (TrackRoll(roll))
         {
+            _logger.Information(
+                "Player {PlayerId} rolled three sixes in a row and forfeits the turn",
+                playerId);
             ForfeitTurn(); // third six in a row, not allowed.
             return roll;
         }
@@ -110,6 +139,10 @@ public class GameController
         Phase = TurnPhase.WaitingForMove;
         if (GetMovablePieces().Count == 0)
         {
+            _logger.Debug(
+                "Player {PlayerId} has no movable pieces for roll {Roll}",
+                playerId,
+                roll);
             OnNoMovablePieces?.Invoke(playerId, roll);
             EndTurn(GrantsExtraTurn(roll, false, false)); // if nothing to move, end turn, unless dice = 6
         }
@@ -153,14 +186,23 @@ public class GameController
         IPiece? piece = GetMovablePieces().FirstOrDefault(p => p.Id == pieceId);
         if (Phase != TurnPhase.WaitingForMove)
         {
+            _logger.Warning(
+                "Move rejected for player {PlayerId} piece {PieceId}: roll the dice first (phase: {Phase})",
+                playerId, pieceId, Phase);
             return MoveResult.Fail("Roll the dice first");
         }
         if (playerId != GetCurrentPlayer().Id)
         {
+            _logger.Warning(
+                "Move rejected: player {PlayerId} tried to move out of turn, current player is {CurrentPlayerId}",
+                playerId, GetCurrentPlayer().Id);
             return MoveResult.Fail("Not your turn.");
         }
         if (piece is null)
         {
+            _logger.Warning(
+                "Move rejected for player {PlayerId} piece {PieceId}: piece cannot move with roll {Roll}",
+                playerId, pieceId, pendingRoll);
             return MoveResult.Fail("This piece cannot move with the current roll.");
         }
         int roll = pendingRoll;
@@ -193,6 +235,10 @@ public class GameController
 
         bool isCaptured = GetPieceState(piece) == PieceState.OnTrack && ResolveLanding(piece.Id);
 
+        _logger.Information(
+            "Player {PlayerId} moved piece {PieceId} to position {Position} (roll {Roll}, captured: {Captured}, finished: {Finished})",
+            playerId, piece.Id, GetPosition(piece), roll, isCaptured, isFinished);
+
         if (isFinished && HasFinishedAllPieces(GetPlayer(playerId)))
         {
             RegisterFinishedPlayer(playerId);
@@ -202,6 +248,10 @@ public class GameController
             {
                 Phase = TurnPhase.Finished;
                 pendingRoll = 0;
+
+                _logger.Information(
+                    "Game ended. Rankings: {@Rankings}",
+                    Rankings.Select(p => new { p.Id, p.Name, p.Color }));
 
                 // The first-place player remains the overall winner.
                 OnGameEnded?.Invoke(Rankings[0].Id);
@@ -307,6 +357,11 @@ public class GameController
             Turn++;
         }
         Phase = TurnPhase.WaitingForRoll;
+
+        _logger.Debug(
+            "Turn {Turn} begins for player {PlayerId} (extra turn: {ExtraTurn})",
+            Turn, GetCurrentPlayer().Id, extraTurn);
+
         OnTurnChanged?.Invoke(GetCurrentPlayer().Id);
     }
 
@@ -489,6 +544,11 @@ public class GameController
         IPiece victim = GetPiece(victimId);
         GetCell(FindCell(victimId)).Pieces.Remove(victim); // remove victim from cell
         GetCell(GetCoordinate(victim.Color, -1)).Pieces.Add(victim); // Place victim to Base
+
+        _logger.Information(
+            "Piece {VictimPieceId} ({Color}) was captured and returned to base",
+            victimId, victim.Color);
+
         OnPieceCaptured?.Invoke(victimId);
     }
 
@@ -518,6 +578,11 @@ public class GameController
         Rankings.Add(player);
 
         int rank = Rankings.Count;
+
+        _logger.Information(
+            "Player {PlayerId} ({PlayerName}) finished in rank {Rank}",
+            playerId, player.Name, rank);
+
         OnPlayerFinished?.Invoke(playerId, rank);
     }
 }
