@@ -16,8 +16,7 @@ Ludo/
     ├── Ludo.Console/    # Console application
     ├── Ludo.Api/        # ASP.NET Core Web API
     └── Ludo.React/      # React frontend (TypeScript + Vite)
-    ├── tests/
-    └── Ludo.Core.Tests/  # NUnit tests for Ludo.Core
+    └── Ludo.Core.Tests/ # NUnit tests for Ludo.Core
 ```
 
 ## Tests
