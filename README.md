@@ -16,7 +16,20 @@ Ludo/
     ├── Ludo.Console/    # Console application
     ├── Ludo.Api/        # ASP.NET Core Web API
     └── Ludo.React/      # React frontend (TypeScript + Vite)
+    ├── tests/
+    └── Ludo.Core.Tests/  # NUnit tests for Ludo.Core
 ```
+
+## Tests
+
+The `Ludo.Core.Tests` project contains unit tests for the shared game logic in `Ludo.Core`. Tests are written using NUnit and cover game rules, piece movement, turn management, captures, player rankings, game completion, and edge cases.
+
+### Run Tests
+
+From the solution root:
+
+```powershell
+dotnet test tests/Ludo.Core.Tests
 
 ## Technology Stack
 
@@ -146,6 +159,8 @@ dotnet run --project src/Ludo.Console
 
 Follow the instructions printed by the console application.
 
+![Console application screenshot](images/ludo_cli.png)
+
 <!--  
 **Console output placeholder**
 
@@ -155,7 +170,6 @@ Example:
 ```text
 Paste representative Ludo.Console output here.
 ```
--->
 
 ```Enter player 1 name: Alice
 Alice chose Red.
@@ -188,6 +202,7 @@ Enter player 3 name (press Enter to finish):
 Player: Alice
 Press Enter to roll the dice...
 ```
+-->
 
 ## API Overview
 
