@@ -11,6 +11,8 @@ namespace Ludo.Core.Tests;
 [TestFixture]
 public class GameController_MovePieceById_Tests
 {
+    #region Invalid Moves
+        
     [Test]
     public void MovePieceById_BeforeGameStarts_ReturnsFailure()
     {
@@ -96,6 +98,8 @@ public class GameController_MovePieceById_Tests
         Assert.That(result.Success, Is.False);
     }
 
+    #endregion
+
     [Test]
     public void MovePieceById_WhenSixIsRolled_MovesPieceOutOfBase()
     {
@@ -163,7 +167,7 @@ public class GameController_MovePieceById_Tests
         Assert.Multiple(() =>
         {
             Assert.That(result.Success, Is.True);
-            // Assert.That(result.PieceFinished, Is.False);
+            Assert.That(result.PieceFinished, Is.False);
         });
     }
 
