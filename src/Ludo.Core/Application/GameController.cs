@@ -193,7 +193,7 @@ public class GameController
 
         bool isCaptured = GetPieceState(piece) == PieceState.OnTrack && ResolveLanding(piece.Id);
 
-        if (isFinished && GetFinishedPlayer()?.Id == playerId)
+        if (isFinished && HasFinishedAllPieces(GetPlayer(playerId)))
         {
             RegisterFinishedPlayer(playerId);
 
@@ -206,12 +206,13 @@ public class GameController
                 // The first-place player remains the overall winner.
                 OnGameEnded?.Invoke(Rankings[0].Id);
                 return new MoveResult(
-                    true, piece.Id, isCaptured, true, false, null);
+                    true, piece.Id, isCaptured, isFinished, false, null);
             }
         }
         bool extraTurn = GrantsExtraTurn(roll, isCaptured, isFinished);
         EndTurn(extraTurn);
-        return new MoveResult(true, piece.Id, isCaptured, true, extraTurn, null);
+        return new MoveResult(
+            true, piece.Id, isCaptured, isFinished, extraTurn, null);
     }
 
     public IPlayer GetPlayer(int playerId) =>
@@ -228,9 +229,15 @@ public class GameController
     public IPlayer GetCurrentPlayer() => players[currentTurnIndex];
     
     public IPlayer? GetFinishedPlayer() => // before: GetWinner();
-        players.FirstOrDefault(
-            p => GetCell(board.HomeStretch[p.Color][^1]).Pieces.Count == 4
-        );
+        players.FirstOrDefault(HasFinishedAllPieces);
+
+    /// <summary>
+    /// True when all four pieces of the given player are in that color's finish cell.
+    /// This checks the player that just moved, unlike GetFinishedPlayer(), which
+    /// returns the first player in the game who has finished.
+    /// </summary>
+    private bool HasFinishedAllPieces(IPlayer player) =>
+        GetCell(board.HomeStretch[player.Color][^1]).Pieces.Count == 4;
 
     /// <summary>
     /// Roll the dice.
