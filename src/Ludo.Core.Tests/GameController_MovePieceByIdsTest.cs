@@ -425,6 +425,8 @@ public class GameController_MovePieceById_Tests
         IBoard board = new Board();
 
         PlayerColor color = PlayerColor.Red;
+        const int playerId = 1;
+        const int finalPieceId = 4;
 
         // Position three Red pieces at the finish.
         // Position the fourth piece one step before the finish.
@@ -436,7 +438,7 @@ public class GameController_MovePieceById_Tests
             [1] = finish,
             [2] = finish,
             [3] = finish,
-            [4] = beforeFinish
+            [finalPieceId] = beforeFinish
         };
 
         GameController game = GameFactory.CreateGameWithPiecePositions(
@@ -445,120 +447,179 @@ public class GameController_MovePieceById_Tests
             playerCount: 2);
 
         game.StartGame();
+        game.RollDice(playerId: playerId);
 
         // Act
-        game.RollDice(playerId: 1);
-
         MoveResult result = game.MovePieceById(
-            playerId: 1,
-            pieceId: 4);
+            playerId: playerId,
+            pieceId: finalPieceId);
 
         // Assert
+        IPlayer finishedPlayer = game.players.Single(p => p.Id == playerId);
+
         Assert.Multiple(() =>
         {
             Assert.That(result.Success, Is.True);
             Assert.That(result.Error, Is.Null);
+            Assert.That(result.PieceId, Is.EqualTo(finalPieceId));
+
+            // A piece that reaches the home triangle must report that it finished.
+            Assert.That(result.PieceFinished, Is.True);
+
             Assert.That(
-                game.GetPieceState(game.GetPiece(4)),
+                game.GetPieceState(game.GetPiece(finalPieceId)),
                 Is.EqualTo(PieceState.Finished));
+
+            // The player is registered once all four pieces are finished.
+            Assert.That(game.Rankings, Has.Count.EqualTo(1));
+            Assert.That(game.Rankings[0], Is.SameAs(finishedPlayer));
             Assert.That(
-                game.Rankings.Select(player => player.Id),
-                Does.Contain(1));
+                game.Rankings.Select(player => player.Id).ToArray(),
+                Is.EqualTo(new[] { playerId }));
+
+            // With two players, the first finisher ends the game.
+            Assert.That(game.GetFinishedPlayer(), Is.SameAs(finishedPlayer));
+            Assert.That(game.Phase, Is.EqualTo(TurnPhase.Finished));
         });
     }
 
     /// <summary>
-    /// This test generic for two, three, or four players. 
-    /// Each player starts with three pieces already finished and one piece one step away from finishing. 
-    /// The test then finishes the required number of players.
+    /// Each player that must finish starts with three pieces on the home triangle and one
+    /// piece one step away from it. The game is played through the real turn flow until
+    /// all but one player have finished, which must end the game.
     /// </summary>
-    // [TestCase(2, 1)]
-    // [TestCase(3, 2)]
-    // [TestCase(4, 3)]
-    // public void MovePieceById_WhenRequiredPlayersFinish_EndsGame(
-    //     int playerCount,
-    //     int requiredFinishedPlayers)
-    // {
-    //     // Arrange
-    //     var board = new Board();
-    //     var positions = new Dictionary<int, Coordinate>();
+    [TestCase(2, 1)]
+    [TestCase(3, 2)]
+    [TestCase(4, 3)]
+    public void MovePieceById_WhenRequiredPlayersFinish_EndsGame(
+        int playerCount,
+        int requiredFinishedPlayers)
+    {
+        // Arrange
+        IBoard board = new Board();
+        List<IPlayer> players = PlayerFactory.CreateMany(playerCount);
+        Dictionary<int, Coordinate> positions =
+            CreatePositionsReadyToFinish(
+                board,
+                players,
+                requiredFinishedPlayers);
 
-    //     for (int playerIndex = 0; playerIndex < requiredFinishedPlayers; playerIndex++)
-    //     {
-    //         PlayerColor color = (PlayerColor)playerIndex;
-    //         int firstPieceId = (playerIndex * 4) + 1;
+        // Finishing a piece grants an extra turn. The finished player has no
+        // movable pieces, so one extra roll passes the turn to the next player.
+        // The last finisher ends the game immediately.
+        int[] rolls = Enumerable
+            .Repeat(1, (requiredFinishedPlayers * 2) - 1)
+            .ToArray();
 
-    //         Coordinate finish = board.HomeStretch[color][^1];
-    //         Coordinate beforeFinish = board.HomeStretch[color][^2];
+        GameController game = GameFactory.CreateGameWithPiecePositions(
+            rolls: rolls,
+            positions: positions,
+            board: board,
+            playerCount: playerCount);
 
-    //         // Three pieces are already finished.
-    //         for (int i = 0; i < 3; i++)
-    //         {
-    //             positions[firstPieceId + i] = finish;
-    //         }
+        game.StartGame();
 
-    //         // The fourth piece needs a roll of 1 to finish.
-    //         positions[firstPieceId + 3] = beforeFinish;
-    //     }
+        // Act & Assert
+        for (int playerIndex = 0;
+             playerIndex < requiredFinishedPlayers;
+             playerIndex++)
+        {
+            IPlayer player = players[playerIndex];
+            int finalPieceId = (player.Id - 1) * 4 + 4;
 
-    //     int[] rolls = Enumerable
-    //         .Repeat(1, playerCount * 2)
-    //         .ToArray();
+            Assert.That(
+                game.GetCurrentPlayer().Id,
+                Is.EqualTo(player.Id),
+                $"Player {player.Id} should be the current player.");
 
-    //     GameController game = GameFactory.CreateGameWithPiecePositions(
-    //         rolls: rolls,
-    //         positions: positions,
-    //         board: board,
-    //         playerCount: playerCount);
+            game.RollDice(playerId: player.Id);
+            MoveResult result = game.MovePieceById(
+                playerId: player.Id,
+                pieceId: finalPieceId);
 
-    //     game.StartGame();
+            int[] expectedRanking = players
+                .Take(playerIndex + 1)
+                .Select(rankedPlayer => rankedPlayer.Id)
+                .ToArray();
 
-    //     // Act
-    //     while (game.Phase != TurnPhase.Finished)
-    //     {
-    //         IPlayer currentPlayer = game.GetCurrentPlayer();
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    result.Success,
+                    Is.True,
+                    $"Player {player.Id} should finish their last piece.");
+                Assert.That(result.Error, Is.Null);
+                Assert.That(result.PieceFinished, Is.True);
+                Assert.That(
+                    game.GetPieceState(game.GetPiece(finalPieceId)),
+                    Is.EqualTo(PieceState.Finished));
+                Assert.That(
+                    game.Rankings.Select(rankedPlayer => rankedPlayer.Id).ToArray(),
+                    Is.EqualTo(expectedRanking),
+                    $"Player {player.Id} should be registered in the rankings.");
+            });
 
-    //         game.RollDice(currentPlayer.Id);
+            if (playerIndex < requiredFinishedPlayers - 1)
+            {
+                // The finisher keeps the turn. Rolling again with no movable
+                // pieces passes the turn to the next player.
+                Assert.That(
+                    game.GetCurrentPlayer().Id,
+                    Is.EqualTo(player.Id),
+                    "Finishing a piece should grant an extra turn.");
+                game.RollDice(playerId: player.Id);
+            }
+        }
 
-    //         // A player who has already finished has no movable pieces.
-    //         // RollDice automatically ends that turn and advances to the next player.
-    //         if (game.Phase != TurnPhase.WaitingForMove)
-    //         {
-    //             continue;
-    //         }
+        // Assert
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                game.Phase,
+                Is.EqualTo(TurnPhase.Finished),
+                "The game should end once all but one player have finished.");
+            Assert.That(
+                game.Rankings,
+                Has.Count.EqualTo(requiredFinishedPlayers));
+            Assert.That(
+                game.Rankings.Select(rankedPlayer => rankedPlayer.Id).ToArray(),
+                Is.EqualTo(players
+                    .Take(requiredFinishedPlayers)
+                    .Select(rankedPlayer => rankedPlayer.Id)
+                    .ToArray()));
+        });
+    }
 
-    //         int finalPieceId = (currentPlayer.Id - 1) * 4 + 4;
+    /// <summary>
+    /// Places three pieces of every player that is expected to finish on the finish
+    /// cell, and the fourth piece one step before it. The remaining player(s) stay in
+    /// their base, so they cannot move with the scripted roll of 1.
+    /// </summary>
+    private static Dictionary<int, Coordinate> CreatePositionsReadyToFinish(
+        IBoard board,
+        IReadOnlyList<IPlayer> players,
+        int playersToFinish)
+    {
+        var positions = new Dictionary<int, Coordinate>();
 
-    //         MoveResult result = game.MovePieceById(
-    //             currentPlayer.Id,
-    //             finalPieceId);
+        for (int playerIndex = 0;
+             playerIndex < playersToFinish;
+             playerIndex++)
+        {
+            IPlayer player = players[playerIndex];
+            int firstPieceId = (player.Id - 1) * 4 + 1;
 
-    //         Assert.That(
-    //             result.Success,
-    //             Is.True,
-    //             $"Player {currentPlayer.Name} should be able to finish their last piece.");
+            Coordinate finish = board.HomeStretch[player.Color][^1];
+            Coordinate beforeFinish = board.HomeStretch[player.Color][^2];
 
-    //         Assert.That(
-    //             game.Rankings.Any(p => p.Id == currentPlayer.Id),
-    //             Is.True,
-    //             $"{currentPlayer.Name} should be registered in the rankings.");
-    //     }
+            for (int pieceOffset = 0; pieceOffset < 3; pieceOffset++)
+            {
+                positions[firstPieceId + pieceOffset] = finish;
+            }
 
-    //     // Assert
-    //     Assert.That(game.Phase, Is.EqualTo(TurnPhase.Finished));
+            positions[firstPieceId + 3] = beforeFinish;
+        }
 
-    //     Assert.That(
-    //         game.Rankings.Count,
-    //         Is.EqualTo(requiredFinishedPlayers));
-
-    //     for (int i = 0; i < requiredFinishedPlayers; i++)
-    //     {
-    //         Assert.That(
-    //             game.Rankings[i].Id,
-    //             Is.EqualTo(i + 1),
-    //             $"Player {i + 1} should have rank {i + 1}.");
-    //     }
-    // }
-
-
+        return positions;
+    }
 }
